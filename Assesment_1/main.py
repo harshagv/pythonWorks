@@ -1,68 +1,76 @@
 #!/usr/bin/python3
 
-from lib.wget import download
-from xlrd import open_workbook
+import sys
 import json
 import boto3
-from boto.s3.key import Key
-
-url='https://www.iso20022.org/sites/default/files/ISO10383_MIC/ISO10383_MIC.xls'
-
-try:
-  excelFileName=download(url)
-except Exception as downloadExcp:
-  raise print(downloadExcp + "Unable to download " + url)
-
-try:
-workbook = open_workbook(excelFileName)
-#worksheets = workbook.sheet_names()
-worksheet = workbook.sheet_by_name('MICs List by CC')
-
-# Read Workbook header values into a list
-first_row_keys = [] 
-for col in range(worksheet.ncols):
-    first_row_keys.append( worksheet.cell_value(0,col) )
-
-# Convert the workbook to a list of dictionary
-row_data = []
-for row in range(1, worksheet.nrows):
-    elm = {}
-    for col in range(worksheet.ncols):
-        elm[first_row_keys[col]]=worksheet.cell_value(row,col)
-    row_data.append(elm)
-
-# Print the row header data
-print("Workbook Row Headers are : " + first_row_keys)
-print("\n")
-
-# Store the list containing row data to a json file 
-jsonFileName="row_data.json"
-
-json = json.dumps(row_data)
-f = open(jsonFileName,"w")
-f.write(json)
-f.close()
+from boto3.s3.key import Key
+from lib.wget import download
+from xlrd import open_workbook
 
 
-# Store the list from json file in an AWS S3 bucket using AWS lambda function
-keyId = "our_aws_key_id"
-sKeyId= "our_aws_secret_key_id"
+def read_excel_write_json(xlsFileURL):
+	worksheetName='MICs List by CC'
 
-def save_json_data_to_bucket(event,context):
+	try:
+	  excelFileName=download(xlsFileURL)
+	except Exception as downloadExcp:
+	  raise print(downloadExcp + "Unable to download " + xlsFileURL)
 
-	file = open(jsonFileName,"r")
+	workbook = open_workbook(excelFileName)
+	#worksheets = workbook.sheet_names()
+	worksheet = workbook.sheet_by_name(worksheetName)
 
-	conn = boto.connect_s3(keyId,sKeyId)
+	try:
+		# Read Workbook header values into a list
+		first_row_keys = [] 
+		for col in range(worksheet.ncols):
+		    first_row_keys.append( worksheet.cell_value(0,col) )
 
-	bucketName="myJsonBucket01"
-	bucket = conn.get_bucket(bucketName)
+		# Convert the workbook into a list of dictionary [key:pair values]
+		row_data = []
+		for row in range(1, worksheet.nrows):
+		    elm = {}
+		    for col in range(worksheet.ncols):
+		        elm[first_row_keys[col]]=worksheet.cell_value(row,col)
+		    row_data.append(elm)
+    except Exception as xlsException:
+        raise(xlsException + " Error getting bucket!")
 
-	# Get the Key object of the bucket
-	k = Key(bucket)
+	# Print the row header data
+	print("Workbook Row Headers are : " + *first_row_keys)
 
-	# Crete a new key with id as the name of the json file
-	k.key=jsonFileName
+	# Store the list containing workbook row data to a json file 
+	global jsonFileName
+	jsonFileName="row_data.json"
+
+	json = json.dumps(row_data)
+	f = open(jsonFileName,"w")
+	f.write(json)
+	f.close()
+
+
+def save_json_data_to_bucket_handler(event,context):
+	# Store the list from json file in an AWS S3 bucket using AWS lambda function
+	bucketName = "myJsonBucket01"
 	
-	# Upload the file
-	# Result contains the size of the file uploaded
-	result = k.set_contents_from_file(file)	
+	jsonFile = open(jsonFileName,"r")
+
+	try:
+		s3 = boto3.resource('s3')
+		response = s3.create_bucket(Bucket=bucketName, CreateBucketConfiguration={'LocationConstraint': 'ap-south-1'})
+		s3.Object('jsonBucket', jsonFileName).put(Body=open(jsonFileName, 'rb'))
+
+    except Exception as awsBucketException:
+        raise(awsBucketException + " Error getting bucket!")
+
+	return "Success in transferring json contents to an AWS S3 bucket"
+
+
+if __name__ == "__main__":
+    try:
+    	xlsFileURL='https://www.iso20022.org/sites/default/files/ISO10383_MIC/ISO10383_MIC.xls'
+        read_excel_write_json(xlsFileURL)
+        message = save_json_data_to_bucket_handler({},{})
+        print(message)
+    except Exception as msg:
+        raise(msg)
