@@ -13,7 +13,7 @@ Assessment:
 use any terminal:
 
 ```
-cd Assessment_1
+cd Assesment_1
 python3 main.py
 ```
 
