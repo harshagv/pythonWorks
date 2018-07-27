@@ -17,4 +17,4 @@ cd Assesment_1
 python3 main.py
 ```
 
-view the results
+check the results
