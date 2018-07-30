@@ -6,7 +6,7 @@
 
 3. Display the updated YAMl file contents which was replaced by regex subsititution
 
-4. Display the new pattern matching regex for used for substituting from YAML file content
+4. Display the new pattern matching regex used for substituting from YAML file content
 
 
 ### Running the Code:
