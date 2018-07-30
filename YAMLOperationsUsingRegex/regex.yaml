@@ -1,0 +1,10 @@
+---
+gvh_jboss::version: 7.1.1
+
+gvh_jboss::deployments:
+  RAJ:
+    url: http://some.com/raj.ear
+    sha1: 9b6b1bfc5bd3cb459dff7434fe4b7dffd65b893c
+  VID:
+    url: http://some.com/filestore/vid.war
+    sha1: e83dcfa72fb8a773149691c42dff69b507e2e35e
