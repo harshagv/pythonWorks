@@ -11,7 +11,8 @@ from xlrd import open_workbook
 
 def read_excel_write_json(xlsFileURL):
 	worksheetName='MICs List by CC'
-
+	
+	#Download the excel file: xlsFileURL
 	try:
 	  excelFileName=download(xlsFileURL)
 	except Exception as downloadExcp:
@@ -20,22 +21,22 @@ def read_excel_write_json(xlsFileURL):
 	workbook = open_workbook(excelFileName)
 	#worksheets = workbook.sheet_names()
 	worksheet = workbook.sheet_by_name(worksheetName)
-
+	
+	# Read Workbook header values into a list
 	try:
-		# Read Workbook header values into a list
 		first_row_keys = [] 
 		for col in range(worksheet.ncols):
-		    first_row_keys.append( worksheet.cell_value(0,col) )
+		first_row_keys.append( worksheet.cell_value(0,col) )
 
 		# Convert the workbook into a list of dictionary [key:pair values]
 		row_data = []
 		for row in range(1, worksheet.nrows):
 		    elm = {}
 		    for col in range(worksheet.ncols):
-		        elm[first_row_keys[col]]=worksheet.cell_value(row,col)
+			elm[first_row_keys[col]]=worksheet.cell_value(row,col)
 		    row_data.append(elm)
-    except Exception as xlsException:
-        raise(xlsException + " Error getting bucket!")
+	except Exception as xlsException:
+		raise(xlsException + " Error getting bucket!")
 
 	# Print the row header data
 	print("Workbook Row Headers are : " + *first_row_keys)
@@ -55,14 +56,15 @@ def save_json_data_to_bucket_handler(event,context):
 	bucketName = "myJsonBucket01"
 	
 	jsonFile = open(jsonFileName,"r")
-
+	
+	# create AWS s3 bucket in the region - '' and put the json file contents to the same
 	try:
 		s3 = boto3.resource('s3')
 		response = s3.create_bucket(Bucket=bucketName, CreateBucketConfiguration={'LocationConstraint': 'ap-south-1'})
 		s3.Object('jsonBucket', jsonFileName).put(Body=open(jsonFileName, 'rb'))
 
-    except Exception as awsBucketException:
-        raise(awsBucketException + " Error getting bucket!")
+	except Exception as awsBucketException:
+		raise(awsBucketException + " Error getting bucket!")
 
 	return "Success in transferring json contents to an AWS S3 bucket"
 
