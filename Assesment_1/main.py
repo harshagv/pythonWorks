@@ -14,9 +14,9 @@ def read_excel_write_json(xlsFileURL):
 	
 	#Download the excel file: xlsFileURL
 	try:
-	  excelFileName=download(xlsFileURL)
+		excelFileName=download(xlsFileURL)
 	except Exception as downloadExcp:
-	  raise print(downloadExcp + "Unable to download " + xlsFileURL)
+		raise print(downloadExcp + "Unable to download " + xlsFileURL)
 
 	workbook = open_workbook(excelFileName)
 	#worksheets = workbook.sheet_names()
