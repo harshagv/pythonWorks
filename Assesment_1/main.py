@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+w#!/usr/bin/python3
 __author__ = 'harshagv'
 
 import sys
