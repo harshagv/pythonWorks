@@ -12,7 +12,7 @@ from xlrd import open_workbook
 def read_excel_write_json(xlsFileURL):
 	worksheetName='MICs List by CC'
 	
-	#Download the excel file: xlsFileURL
+	# Download the excel file: xlsFileURL
 	try:
 		excelFileName=download(xlsFileURL)
 	except Exception as downloadExcp:
@@ -20,6 +20,8 @@ def read_excel_write_json(xlsFileURL):
 
 	workbook = open_workbook(excelFileName)
 	#worksheets = workbook.sheet_names()
+	
+	# Read the worksheet with the name - 'MICs List by CC'
 	worksheet = workbook.sheet_by_name(worksheetName)
 	
 	# Read Workbook header values into a list
