@@ -32,8 +32,10 @@ systemctl restart ssh
 DB_NAME="dvwa"
 DB_USER="user"
 DB_PASS="pass"
-DB_HOST="127.0.0.1"
+DB_HOST="locahost"
 WEB_DIR="/var/www/html/dvwa"
+SERVER_NAME="localhost"
+# SERVER_NAME=${1:-$(hostname -I | awk '{print $1}')}
 
 echo "Installing required packages for DVWA..."
 apt install -y apache2 mariadb-server php php-mysqli php-gd php-zip php-json php-bcmath php-xml libapache2-mod-php git
@@ -79,15 +81,10 @@ sed -i 's/^\s*allow_url_include\s*=.*/allow_url_include = On/' "$PHPINI"
 echo "Restarting Apache..."
 systemctl restart apache2
 
-# Allow user to set ServerName as an argument, else auto-detect VM's primary IP
+### Apache Configuration for Localhost Only ###
+echo "[INFO] Setting Apache to localhost-only mode"
 
-# --- CONFIG ---
-# SERVER_NAME=${1:-$(hostname -I | awk '{print $1}')}
-SERVER_NAME=localhost
-
-echo "[INFO] Using ServerName: ${SERVER_NAME}"
-
-# 1️⃣ Set GLOBAL ServerName in apache2.conf to prevent AH00558 warning
+# 1) Set GLOBAL ServerName in apache2.conf to prevent AH00558 warning
 if ! grep -q "ServerName" /etc/apache2/apache2.conf; then
     echo "[INFO] Adding global ServerName to apache2.conf"
     echo "ServerName ${SERVER_NAME}" | sudo tee -a /etc/apache2/apache2.conf
@@ -96,10 +93,14 @@ else
     sudo sed -i "s/^ServerName.*/ServerName ${SERVER_NAME}/" /etc/apache2/apache2.conf
 fi
 
-# 2️⃣ Create DVWA VirtualHost config
+# 2) Set Apache to listen only on 127.0.0.1:80
+sed -i 's/^Listen .*/Listen 127.0.0.1:80/' /etc/apache2/ports.conf
+
+
+# 3) Create DVWA VirtualHost config
 sudo tee /etc/apache2/sites-available/dvwa.conf > /dev/null <<EOF
-<VirtualHost *:80>
-    ServerName localhost
+<VirtualHost 127.0.0.1:80>
+    ServerName ${SERVER_NAME}
     DocumentRoot /var/www/html/dvwa
 
     <Directory /var/www/html/dvwa>
