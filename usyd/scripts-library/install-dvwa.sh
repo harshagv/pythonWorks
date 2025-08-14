@@ -163,24 +163,38 @@ EOF
     echo "======================================="
 }
 
-### ===== MAIN LOGIC ===== ###
-if [[ "$1" == "ssh" ]]; then
-    install_ssh
-    echo "[INFO] SSH-only installation complete."
-elif [[ -z "$1" ]]; then
-    install_ssh
-    install_dvwa
-    echo "[INFO] Full SSH + DVWA installation complete."
-else
-    echo "Usage: $0 [ssh]"
-    exit 1
-fi
+# --- Function to display the final signature ---
+print_signature() {
+    echo
+    if command -v get_language_message >/dev/null 2>&1; then
+        # Assuming get_language_message is a function that might exist
+        # to provide translations or special formatting.
+        final_message=$(get_language_message "\\033[95mWith ♡ by Harsha")
+        echo -e "$final_message"
+    else
+        # Default fallback if the function doesn't exist
+        echo -e "\033[95mWith ♡ by Harsha\033[0m"
+    fi
+}
 
-# --- Final Signature Message ---
-echo
-if command -v get_language_message >/dev/null 2>&1; then
-    final_message=$(get_language_message "\\033[95mWith ♡ by Harsha")
-    echo -e "$final_message"
-else
-    echo -e "\033[95mWith ♡ by Harsha\033[0m"
-fi
+### ===== MAIN LOGIC ===== ###
+case "$1" in
+    "ssh")
+        # Handle the 'ssh' argument
+        install_ssh
+        echo "[INFO] SSH-only installation complete."
+        print_signature # Call the signature function
+        ;;
+    "")
+        # Handle the empty argument (no argument provided)
+        install_ssh
+        install_dvwa
+        echo "[INFO] Full SSH + DVWA installation complete."
+        print_signature # Call the signature function
+        ;;
+    *)
+        # Handle all other (invalid) arguments
+        echo "Usage: $0 [ssh]"
+        exit 1
+        ;;
+esac
