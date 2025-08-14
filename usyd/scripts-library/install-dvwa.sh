@@ -30,8 +30,8 @@ systemctl restart ssh
 
 # ==== CONFIG ====
 DB_NAME="dvwa"
-DB_USER="user"
-DB_HOST="locahost"
+DB_USER="root"
+DB_HOST="localhost"
 WEB_DIR="/var/www/html/dvwa"
 SERVER_NAME="localhost"
 # SERVER_NAME=${1:-$(hostname -I | awk '{print $1}')}
@@ -98,14 +98,13 @@ else
 fi
 
 # 2) Set Apache to listen only on 127.0.0.1:80
-sed -i 's/^Listen .*/Listen 127.0.0.1:80/' /etc/apache2/ports.conf
-
+sed -i 's/^Listen .*/Listen 80/' /etc/apache2/ports.conf
 
 # 3) Create DVWA VirtualHost config
 sudo tee /etc/apache2/sites-available/dvwa.conf > /dev/null <<EOF
-<VirtualHost 127.0.0.1:80>
+<VirtualHost *:80>
     ServerName ${SERVER_NAME}
-    DocumentRoot /var/www/html/dvwa
+    DocumentRoot /var/www/html
 
     <Directory /var/www/html/dvwa>
         Options Indexes FollowSymLinks
@@ -122,6 +121,8 @@ EOF
 sudo a2ensite dvwa.conf
 sudo a2enmod rewrite
 sudo a2dissite 000-default.conf
+sudo apache2ctl configtest
+sudo apache2ctl -S
 
 # 4️⃣ Restart Apache
 sudo systemctl restart apache2
@@ -129,6 +130,7 @@ sudo systemctl restart apache2
 echo "======================================="
 echo "DVWA configured successfully!"
 echo "Global ServerName set to ${SERVER_NAME}"
+curl -I http://localhost/dvwa/setup.php
 echo "  → Accessible at: http://${SERVER_NAME}/dvwa/setup.php"
 echo "Default DB User: ${DB_USER}, Password: ${DB_PASS}"
 echo " Username : admin"
@@ -139,9 +141,9 @@ echo "======================================="
 # --- Final Signature Message ---
 echo
 if command -v get_language_message >/dev/null 2>&1; then
-    final_message=$(get_language_message "\\033[95mWith ♡ by IamCarron" "\\033[95mCon ♡ by Harsha")
+    final_message=$(get_language_message "\\033[95mCon ♡ by Harsha")
     echo -e "$final_message"
 else
-    echo -e "\033[95mWith ♡ by IamCarron\033[0m"
     echo -e "\033[95mCon ♡ by Harsha\033[0m"
 fi
+
