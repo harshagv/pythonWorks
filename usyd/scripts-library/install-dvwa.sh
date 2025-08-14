@@ -31,11 +31,15 @@ systemctl restart ssh
 # ==== CONFIG ====
 DB_NAME="dvwa"
 DB_USER="user"
-DB_PASS="pass"
 DB_HOST="locahost"
 WEB_DIR="/var/www/html/dvwa"
 SERVER_NAME="localhost"
 # SERVER_NAME=${1:-$(hostname -I | awk '{print $1}')}
+# --- Ask for SQL user password ---
+echo -e "\e[96mEnter SQL password for DVWA user (press Enter for default: pass):\e[0m"
+read -s DB_PASS
+echo
+DB_PASS=${DB_PASS:-pass}
 
 echo "Installing required packages for DVWA..."
 apt install -y apache2 mariadb-server php php-mysqli php-gd php-zip php-json php-bcmath php-xml libapache2-mod-php git
@@ -131,3 +135,13 @@ echo " Username : admin"
 echo " Password : password (DVWA default)"
 echo "======================================="
 
+
+# --- Final Signature Message ---
+echo
+if command -v get_language_message >/dev/null 2>&1; then
+    final_message=$(get_language_message "\\033[95mWith ♡ by IamCarron" "\\033[95mCon ♡ by Harsha")
+    echo -e "$final_message"
+else
+    echo -e "\033[95mWith ♡ by IamCarron\033[0m"
+    echo -e "\033[95mCon ♡ by Harsha\033[0m"
+fi
