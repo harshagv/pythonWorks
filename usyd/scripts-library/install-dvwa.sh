@@ -52,8 +52,8 @@ else
 fi
 
 echo "Setting permissions..."
-chown -R www-data:www-data dvwa
-chmod -R 755 dvwa
+sudo chown -R www-data:www-data /var/www/html/dvwa
+sudo chmod -R 755 /var/www/html/dvwa
 
 echo "Configuring MariaDB for DVWA..."
 mysql -u root <<EOF
@@ -82,7 +82,8 @@ systemctl restart apache2
 # Allow user to set ServerName as an argument, else auto-detect VM's primary IP
 
 # --- CONFIG ---
-SERVER_NAME=${1:-$(hostname -I | awk '{print $1}')}
+# SERVER_NAME=${1:-$(hostname -I | awk '{print $1}')}
+SERVER_NAME=localhost
 
 echo "[INFO] Using ServerName: ${SERVER_NAME}"
 
@@ -98,7 +99,7 @@ fi
 # 2️⃣ Create DVWA VirtualHost config
 sudo tee /etc/apache2/sites-available/dvwa.conf > /dev/null <<EOF
 <VirtualHost *:80>
-    ServerName ${SERVER_NAME}
+    ServerName localhost
     DocumentRoot /var/www/html/dvwa
 
     <Directory /var/www/html/dvwa>
@@ -125,5 +126,7 @@ echo "DVWA configured successfully!"
 echo "Global ServerName set to ${SERVER_NAME}"
 echo "  → Accessible at: http://${SERVER_NAME}/dvwa/setup.php"
 echo "Default DB User: ${DB_USER}, Password: ${DB_PASS}"
+echo " Username : admin"
+echo " Password : password (DVWA default)"
 echo "======================================="
 
