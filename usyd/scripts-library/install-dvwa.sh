@@ -72,9 +72,25 @@ EOF
 echo "Updating DVWA config file..."
 cd "$WEB_DIR/config"
 cp -n config.inc.php.dist config.inc.php
-sed -i "s|^\(\s*\$_DVWA\['db_server'\]\s*=\s*\).*$|\1'${DB_HOST}';|" config.inc.php
-sed -i "s|^\(\s*\$_DVWA\['db_user'\]\s*=\s*\).*$|\1'${DB_USER}';|" config.inc.php
-sed -i "s|^\(\s*\$_DVWA\['db_password'\]\s*=\s*\).*$|\1'${DB_PASS}';|" config.inc.php
+# Check if the config file exists
+CONFIG_FILE="/var/www/html/dvwa/config/config.inc.php"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: Configuration file not found at $CONFIG_FILE"
+    exit 1
+fi
+# Remove Windows-style carriage returns
+sed -i 's/\r//g' "$CONFIG_FILE"
+# Comment out the original lines and insert new ones
+sed -i "/'db_server'/c\
+\$_DVWA[ 'db_server' ] = '$DB_HOST';
+" "$CONFIG_FILE"
+sed -i "/'db_user'/c\
+\$_DVWA[ 'db_user' ] = '$DB_USER';
+" "$CONFIG_FILE"
+sed -i "/'db_password'/c\
+\$_DVWA[ 'db_password' ] = '$DB_PASS';
+" "$CONFIG_FILE"
+echo "Configuration file updated successfully."
 
 echo "Configuring PHP settings for DVWA..."
 PHPINI="/etc/php/$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')/apache2/php.ini"
@@ -147,3 +163,13 @@ else
     echo -e "\033[95mWith ♡ by Harsha\033[0m"
 fi
 
+# curl -L https://raw.githubusercontent.com/IamCarron/DVWA-Script/main/Install-DVWA.sh | sh
+
+
+# ssh -L 8888:127.0.0.1:80 user@vm1_ip
+# access URL: http://127.0.0.1:8888/dvwa
+
+
+# ssh -L 8888:<target host>:80 user@<jump host> -N
+
+# ssh -L 8888:10.0.2.6:80 user@192.168.11.7 -N
