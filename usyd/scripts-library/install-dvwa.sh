@@ -72,9 +72,9 @@ EOF
 echo "Updating DVWA config file..."
 cd "$WEB_DIR/config"
 cp -n config.inc.php.dist config.inc.php
-sed -i "s/^\(\s*\$_DVWA\['db_server'\]\s*=\s*\).*$/\1'${DB_HOST}';/" config.inc.php
-sed -i "s/^\(\s*\$_DVWA\['db_user'\]\s*=\s*\).*$/\1'${DB_USER}';/" config.inc.php
-sed -i "s/^\(\s*\$_DVWA\['db_password'\]\s*=\s*\).*$/\1'${DB_PASS}';/" config.inc.php
+sed -i "s|^\(\s*\$_DVWA\['db_server'\]\s*=\s*\).*$|\1'${DB_HOST}';|" config.inc.php
+sed -i "s|^\(\s*\$_DVWA\['db_user'\]\s*=\s*\).*$|\1'${DB_USER}';|" config.inc.php
+sed -i "s|^\(\s*\$_DVWA\['db_password'\]\s*=\s*\).*$|\1'${DB_PASS}';|" config.inc.php
 
 echo "Configuring PHP settings for DVWA..."
 PHPINI="/etc/php/$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')/apache2/php.ini"
