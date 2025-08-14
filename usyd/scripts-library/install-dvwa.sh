@@ -76,7 +76,7 @@ install_dvwa() {
     CREATE USER IF NOT EXISTS '${DB_USER}'@'${DB_HOST}' IDENTIFIED BY '${DB_PASS}';
     GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'${DB_HOST}';
     FLUSH PRIVILEGES;
-    EOF
+EOF
 
     echo "Updating DVWA config file..."
     cd "$WEB_DIR/config"
@@ -140,7 +140,7 @@ install_dvwa() {
         ErrorLog \${APACHE_LOG_DIR}/dvwa_error.log
         CustomLog \${APACHE_LOG_DIR}/dvwa_access.log combined
     </VirtualHost>
-    EOF
+EOF
 
     # 3️⃣ Enable site and modules
     sudo a2ensite dvwa.conf
@@ -184,14 +184,3 @@ if command -v get_language_message >/dev/null 2>&1; then
 else
     echo -e "\033[95mWith ♡ by Harsha\033[0m"
 fi
-
-# curl -L https://raw.githubusercontent.com/IamCarron/DVWA-Script/main/Install-DVWA.sh | sh
-
-
-# ssh -L 8888:127.0.0.1:80 user@vm1_ip
-# access URL: http://127.0.0.1:8888/dvwa
-
-
-# ssh -L 8888:<target host>:80 user@<jump host> -N
-
-# ssh -L 8888:10.0.2.6:80 user@192.168.11.7 -N
