@@ -30,7 +30,7 @@ systemctl restart ssh
 
 # ==== CONFIG ====
 DB_NAME="dvwa"
-DB_USER="root"
+DB_USER="dvwa"
 DB_HOST="localhost"
 WEB_DIR="/var/www/html/dvwa"
 SERVER_NAME="localhost"
@@ -141,9 +141,9 @@ echo "======================================="
 # --- Final Signature Message ---
 echo
 if command -v get_language_message >/dev/null 2>&1; then
-    final_message=$(get_language_message "\\033[95mCon ♡ by Harsha")
+    final_message=$(get_language_message "\\033[95mWith ♡ by Harsha")
     echo -e "$final_message"
 else
-    echo -e "\033[95mCon ♡ by Harsha\033[0m"
+    echo -e "\033[95mWith ♡ by Harsha\033[0m"
 fi
 
