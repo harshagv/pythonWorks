@@ -1,9 +1,0 @@
-FROM ubuntu:latest
-
-RUN apt-get update && apt-get install -y socat
-
-COPY agent.sh /app/agent.sh
-COPY agent_handler.sh /bin/agent_handler.sh
-RUN chmod +x /app/agent.sh /bin/agent_handler.sh
-WORKDIR /app
-CMD ["sh", "/app/agent.sh"]
