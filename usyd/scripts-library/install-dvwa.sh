@@ -3,6 +3,7 @@
 # Usage:
 #   sudo bash install-dvwa.sh          # Install SSH + DVWA
 #   sudo bash install-dvwa.sh ssh      # Install SSH only
+#   sudo bash install-dvwa.sh dvwa      # Install DVWA only
 
 set -e
 
@@ -28,7 +29,7 @@ print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
 install_ssh() {
     print_title "=== STEP 1: Install and Configure OpenSSH Server ==="
 
-    echo "Updating system..."
+    echo "Updating system.."
     apt update && apt upgrade -y
 
     echo "Installing OpenSSH server..."
@@ -40,12 +41,12 @@ install_ssh() {
     sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' $SSHD_CONFIG
     sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' $SSHD_CONFIG
 
-    echo "Configuring UFW firewall for SSH access..."
+    echo "Configuring UFW firewall for SSH access.."
     ufw status || true
     ufw enable
     ufw allow 22
 
-    echo "Restarting SSH service..."
+    echo "Restarting SSH service.."
     systemctl restart ssh
 
     print_success "OpenSSH server installed successfully!"
@@ -64,7 +65,7 @@ install_dvwa() {
     # SERVER_NAME=${1:-$(hostname -I | awk '{print $1}')}
     # --- Ask for SQL user password ---
     echo -e "\e[96mEnter SQL password for DVWA user (press Enter for default: pass):\e[0m"
-    read -s DB_PASS
+    read -s DB_PASS < /dev/tty
     echo
     DB_PASS=${DB_PASS:-pass}
 
@@ -84,11 +85,11 @@ install_dvwa() {
         mv DVWA dvwa
     fi
 
-    echo "Setting permissions..."
+    echo "Setting permissions.."
     sudo chown -R www-data:www-data /var/www/html/dvwa
     sudo chmod -R 755 /var/www/html/dvwa
 
-    echo "Configuring MariaDB for DVWA..."
+    echo "Configuring MariaDB for DVWA.."
     mysql -u root <<EOF
     CREATE DATABASE IF NOT EXISTS ${DB_NAME};
     CREATE USER IF NOT EXISTS '${DB_USER}'@'${DB_HOST}' IDENTIFIED BY '${DB_PASS}';
@@ -96,7 +97,7 @@ install_dvwa() {
     FLUSH PRIVILEGES;
 EOF
 
-    echo "Updating DVWA config file..."
+    echo "Updating DVWA config file.."
     cd "$WEB_DIR/config"
     cp -n config.inc.php.dist config.inc.php
     # Check if the config file exists
@@ -125,7 +126,7 @@ EOF
     sed -i 's/^\s*allow_url_include\s*=.*/allow_url_include = On/' "$PHPINI"
 
 
-    echo "Restarting Apache..."
+    echo "Restarting Apache.."
     systemctl restart apache2
 
     ### Apache Configuration for Localhost Only ###
@@ -167,11 +168,14 @@ EOF
     sudo apache2ctl configtest
     sudo apache2ctl -S
 
+    echo "Configuring UFW firewall for HTTP access.."
+    ufw allow 80
+ 
     # 4️⃣ Restart Apache
     sudo systemctl restart apache2
 
     echo "======================================="
-    print_success "DVWA configured successfully!"
+    print_success "[✔] DVWA configured successfully!"
     print_title "Global ServerName set to ${SERVER_NAME}"
     curl -I http://localhost/dvwa/setup.php
     print_title "  → Accessible at: http://${SERVER_NAME}/dvwa/setup.php"
@@ -187,11 +191,11 @@ print_signature() {
     if command -v get_language_message >/dev/null 2>&1; then
         # Assuming get_language_message is a function that might exist
         # to provide translations or special formatting.
-        final_message=$(get_language_message "\\033[95mWith ♡ by Harsha")
+        final_message=$(get_language_message "\\033[1;32mCreated with ♡, Harsha")
         echo -e "$final_message"
     else
         # Default fallback if the function doesn't exist
-        echo -e "\033[95mWith ♡ by Harsha\033[0m"
+        echo -e "\033[92mCreated with ♡, Harsha\033[0m"
     fi
 }
 
@@ -200,20 +204,20 @@ case "$1" in
     "ssh")
         # Handle the 'ssh' argument
         install_ssh
-        print_info "SSH-only installation complete."
+        print_info "[✔] SSH-only installation complete."
         print_signature # Call the signature function
         ;;
     "dvwa")
         # Handle the 'dvwa' argument
         install_dvwa
-        print_info "DVWA installation complete."
+        print_info "[✔] DVWA installation complete."
         print_signature # Call the signature function
         ;;
     "")
         # Handle the empty argument (no argument provided)
         install_ssh
         install_dvwa
-        print_info "Full SSH + DVWA installation complete."
+        print_info "[✔] Full SSH + DVWA installation complete."
         print_signature # Call the signature function
         ;;
     *)
@@ -222,3 +226,4 @@ case "$1" in
         exit 1
         ;;
 esac
+
