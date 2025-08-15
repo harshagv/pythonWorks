@@ -191,11 +191,11 @@ print_signature() {
     if command -v get_language_message >/dev/null 2>&1; then
         # Assuming get_language_message is a function that might exist
         # to provide translations or special formatting.
-        final_message=$(get_language_message "\\033[1;32mCreated with ♡, Harsha")
+        final_message=$(get_language_message "\\033[1;32mCreated with ♡, Harsha ☺︎")
         echo -e "$final_message"
     else
         # Default fallback if the function doesn't exist
-        echo -e "\033[92mCreated with ♡, Harsha\033[0m"
+        echo -e "\033[92mCreated with ♡, Harsha ☺︎\033[0m"
     fi
 }
 
