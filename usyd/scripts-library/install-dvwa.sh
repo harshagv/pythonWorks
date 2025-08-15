@@ -33,7 +33,7 @@ install_ssh() {
     apt update && apt upgrade -y
 
     echo "Installing OpenSSH server.."
-    apt install -y openssh-server
+    apt install -y openssh-server net-tools
 
     echo "Editing SSH configuration: /etc/ssh/sshd_config"
     SSHD_CONFIG="/etc/ssh/sshd_config"
