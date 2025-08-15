@@ -6,11 +6,27 @@
 
 set -e
 
+### ===== COLOR CONSTANTS ===== ###
+RESET="\033[0m"
+GREEN="\033[1;32m"
+RED="\033[1;31m"
+YELLOW="\033[1;33m"
+BLUE="\033[1;34m"
+PINK="\033[1;35m"
+CYAN="\033[1;36m"
+
+### ===== PRINT FUNCTIONS ===== ###
+print_info() { echo -e "${CYAN}[INFO]${RESET} $1"; }
+print_success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
+print_warn() { echo -e "${YELLOW}[WARNING]${RESET} $1"; }
+print_error() { echo -e "${RED}[ERROR]${RESET} $1"; }
+print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
+
 ### ===== FUNCTIONS ===== ###
 
 ### STEP 1: Install and Configure OpenSSH Server
 install_ssh() {
-    echo "=== STEP 1: Install and Configure OpenSSH Server ==="
+    print_title "=== STEP 1: Install and Configure OpenSSH Server ==="
 
     echo "Updating system..."
     apt update && apt upgrade -y
@@ -31,11 +47,13 @@ install_ssh() {
 
     echo "Restarting SSH service..."
     systemctl restart ssh
+
+    print_success "OpenSSH server installed successfully!"
 }
 
 ### STEP 2: DVWA Install and Configuration
 install_dvwa() {
-    echo "=== STEP 2: DVWA Install and Configuration ==="
+    print_title "=== STEP 2: DVWA Install and Configuration ==="
 
     # ==== CONFIG ====
     DB_NAME="dvwa"
@@ -101,7 +119,7 @@ EOF
     " "$CONFIG_FILE"
     echo "Configuration file updated successfully."
 
-    echo "Configuring PHP settings for DVWA..."
+    print_info "Configuring PHP settings for DVWA..."
     PHPINI="/etc/php/$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')/apache2/php.ini"
     sed -i 's/^\s*allow_url_fopen\s*=.*/allow_url_fopen = On/' "$PHPINI"
     sed -i 's/^\s*allow_url_include\s*=.*/allow_url_include = On/' "$PHPINI"
@@ -111,14 +129,14 @@ EOF
     systemctl restart apache2
 
     ### Apache Configuration for Localhost Only ###
-    echo "[INFO] Setting Apache to localhost-only mode"
+    echo "Setting Apache to localhost-only mode"
 
     # 1) Set GLOBAL ServerName in apache2.conf to prevent AH00558 warning
     if ! grep -q "ServerName" /etc/apache2/apache2.conf; then
-        echo "[INFO] Adding global ServerName to apache2.conf"
+        print_info "Adding global ServerName to apache2.conf"
         echo "ServerName ${SERVER_NAME}" | sudo tee -a /etc/apache2/apache2.conf
     else
-        echo "[INFO] Updating existing global ServerName in apache2.conf"
+        print_info "Updating existing global ServerName in apache2.conf"
         sudo sed -i "s/^ServerName.*/ServerName ${SERVER_NAME}/" /etc/apache2/apache2.conf
     fi
 
@@ -153,13 +171,13 @@ EOF
     sudo systemctl restart apache2
 
     echo "======================================="
-    echo "DVWA configured successfully!"
-    echo "Global ServerName set to ${SERVER_NAME}"
+    print_success "DVWA configured successfully!"
+    print_title "Global ServerName set to ${SERVER_NAME}"
     curl -I http://localhost/dvwa/setup.php
-    echo "  → Accessible at: http://${SERVER_NAME}/dvwa/setup.php"
-    echo "Default DB User: ${DB_USER}, Password: ${DB_PASS}"
-    echo " Username : admin"
-    echo " Password : password (DVWA default)"
+    print_title "  → Accessible at: http://${SERVER_NAME}/dvwa/setup.php"
+    print_title "Default DB User: ${DB_USER}, Password: ${DB_PASS}"
+    print_title " Username : admin"
+    print_title " Password : password (DVWA default)"
     echo "======================================="
 }
 
@@ -182,14 +200,20 @@ case "$1" in
     "ssh")
         # Handle the 'ssh' argument
         install_ssh
-        echo "[INFO] SSH-only installation complete."
+        print_info "SSH-only installation complete."
+        print_signature # Call the signature function
+        ;;
+    "dvwa")
+        # Handle the 'dvwa' argument
+        install_dvwa
+        print_info "DVWA installation complete."
         print_signature # Call the signature function
         ;;
     "")
         # Handle the empty argument (no argument provided)
         install_ssh
         install_dvwa
-        echo "[INFO] Full SSH + DVWA installation complete."
+        print_info "Full SSH + DVWA installation complete."
         print_signature # Call the signature function
         ;;
     *)
