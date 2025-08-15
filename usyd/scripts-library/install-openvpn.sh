@@ -227,12 +227,23 @@ print_signature
 
 
 # Client Side
+#!/bin/bash
+# Client Side
 # sudo apt update
 # sudo apt install openvpn openvpn-systemd-resolved network-manager-openvpn network-manager-openvpn-gnome -y
 # scp user@jump_host_ip:~/kali.ovpn ~/Downloads/
 # ip addr show tun0
 # http://<private_ip_of_app_vm>/dvwa/
+# tee -a ~/Downloads/kali.ovpn <<EOF
+# script-security 2
+# up /etc/openvpn/update-resolv-conf
+# down /etc/openvpn/update-resolv-conf
+# EOF
+# tail -n 3 ~/Downloads/kali.ovpn
 # sudo openvpn --config ~/Downloads/kali.ovpn
+
+
+# <NOT REQUIRED>
 # IN Jump Hosts
 # ssh -L 80:<target host>:80 user@<jump host> -N
-# ssh -fN -L 0.0.0.0:8080:VM_A_IP:80 user@VM_A_IP
+
