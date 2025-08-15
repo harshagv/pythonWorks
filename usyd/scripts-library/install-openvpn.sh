@@ -24,17 +24,20 @@ set -e
 EASYRSA_DIR="/etc/openvpn/easy-rsa"
 OPENVPN_DIR="/etc/openvpn"
 CLIENT_NAME="kali"
-SERVER_IP="192.168.11.7"  # <-- Replace this with your jump host publicNAT IP reachable by kali VM
+SERVER_IP="192.88.100.11"  # <-- Replace this with your jump host publicNAT IP reachable by kali VM
 VPN_NET="10.8.0.0 255.255.255.0"
 EXTERNAL_IF="enp0s3"      # <-- Replace this with your jump host publicNAT interface
 # EXTERNAL_IF=$(ip route | grep default | awk '{print $5}')
 
+# ALLOW port binding for port 80
+print_info "ALLOW port binding for port 80"
+setcap 'cap_net_bind_service=+ep' /usr/bin/ssh
 
-print_title "Step 1: Installing OpenVPN and EasyRSA (if needed)..."
+print_title "Step 1: Installing OpenVPN and EasyRSA (if needed).."
 apt update
 apt install -y openvpn easy-rsa
 
-print_title "Step 2: Setting up EasyRSA (PKI)..."
+print_title "Step 2: Setting up EasyRSA (PKI).."
 
 make-cadir $EASYRSA_DIR
 cd $EASYRSA_DIR
@@ -57,21 +60,21 @@ EOF
 # Build the CA (Certificate Authority) without passphrase (for automation)
 echo | ./easyrsa build-ca nopass
 
-print_title "Step 3: Building server certificate & keys..."
+print_title "Step 3: Building server certificate & keys.."
 ./easyrsa gen-req server nopass
 ./easyrsa sign-req server server
 
-print_title "Step 4: Generate Diffie-Hellman parameters..."
+print_title "Step 4: Generate Diffie-Hellman parameters.."
 ./easyrsa gen-dh
 
-print_title "Step 5: Generate HMAC key to defend against DoS attacks..."
+print_title "Step 5: Generate HMAC key to defend against DoS attacks.."
 openvpn --genkey --secret ta.key
 
-print_title "Step 6: Generate client certificates..."
+print_title "Step 6: Generate client certificates.."
 ./easyrsa gen-req $CLIENT_NAME nopass
 ./easyrsa sign-req client $CLIENT_NAME
 
-print_title "Step 7: Copying keys and certs to OpenVPN directory..."
+print_title "Step 7: Copying keys and certs to OpenVPN directory.."
 
 cp pki/ca.crt $OPENVPN_DIR
 cp pki/issued/server.crt $OPENVPN_DIR
@@ -81,7 +84,7 @@ cp ta.key $OPENVPN_DIR
 cp pki/issued/${CLIENT_NAME}.crt $OPENVPN_DIR
 cp pki/private/${CLIENT_NAME}.key $OPENVPN_DIR
 
-print_title "Step 8: Creating server configuration file..."
+print_title "Step 8: Creating server configuration file.."
 
 cat > $OPENVPN_DIR/server.conf <<EOF
 port 1194
@@ -110,12 +113,12 @@ verb 3
 explicit-exit-notify 1
 EOF
 
-print_title "Step 9: Enable IP forwarding..."
+print_title "Step 9: Enable IP forwarding.."
 
 sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
 sysctl -p
 
-print_title "Step 10: Setting up UFW to allow OpenVPN traffic and enable forwarding..."
+print_title "Step 10: Setting up UFW to allow OpenVPN traffic and enable forwarding.."
 
 ufw allow 1194/udp
 ufw allow OpenSSH
@@ -194,6 +197,12 @@ chmod 600 "$CLIENT_CONFIG"
 
 print_success "Client config saved to $CLIENT_CONFIG (owned by $TARGET_USER)"
 
+# Step 11 — Starting OpenVPN
+print_title "Step 11: Starting OpenVPN.."
+systemctl enable openvpn@server.service --now
+systemctl start openvpn@server.service
+systemctl status openvpn@server.service --no-pager --quiet
+
 
 # --- Function to display the final signature ---
 print_signature() {
@@ -219,8 +228,11 @@ print_signature
 
 # Client Side
 # sudo apt update
-# sudo apt install openvpn network-manager-openvpn network-manager-openvpn-gnome -y
+# sudo apt install openvpn openvpn-systemd-resolved network-manager-openvpn network-manager-openvpn-gnome -y
 # scp user@jump_host_ip:~/kali.ovpn ~/Downloads/
 # ip addr show tun0
 # http://<private_ip_of_app_vm>/dvwa/
 # sudo openvpn --config ~/Downloads/kali.ovpn
+# IN Jump Hosts
+# ssh -L 80:<target host>:80 user@<jump host> -N
+# ssh -fN -L 0.0.0.0:8080:VM_A_IP:80 user@VM_A_IP

@@ -32,7 +32,7 @@ install_ssh() {
     echo "Updating system.."
     apt update && apt upgrade -y
 
-    echo "Installing OpenSSH server..."
+    echo "Installing OpenSSH server.."
     apt install -y openssh-server
 
     echo "Editing SSH configuration: /etc/ssh/sshd_config"
@@ -69,17 +69,17 @@ install_dvwa() {
     echo
     DB_PASS=${DB_PASS:-pass}
 
-    echo "Installing required packages for DVWA..."
+    echo "Installing required packages for DVWA.."
     apt install -y apache2 mariadb-server php php-mysqli php-gd php-zip php-json php-bcmath php-xml libapache2-mod-php git
 
-    echo "Enabling and starting Apache & MariaDB..."
+    echo "Enabling and starting Apache & MariaDB.."
     systemctl enable apache2 --now
     systemctl enable mariadb --now
 
-    echo "Cloning DVWA repository..."
+    echo "Cloning DVWA repository.."
     cd /var/www/html
     if [ -d "DVWA" ] || [ -d "dvwa" ]; then
-        echo "DVWA folder already exists, skipping clone..."
+        echo "DVWA folder already exists, skipping clone.."
     else
         git clone https://github.com/digininja/DVWA.git
         mv DVWA dvwa
@@ -120,7 +120,7 @@ EOF
     " "$CONFIG_FILE"
     echo "Configuration file updated successfully."
 
-    print_info "Configuring PHP settings for DVWA..."
+    print_info "Configuring PHP settings for DVWA.."
     PHPINI="/etc/php/$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')/apache2/php.ini"
     sed -i 's/^\s*allow_url_fopen\s*=.*/allow_url_fopen = On/' "$PHPINI"
     sed -i 's/^\s*allow_url_include\s*=.*/allow_url_include = On/' "$PHPINI"
@@ -191,11 +191,11 @@ print_signature() {
     if command -v get_language_message >/dev/null 2>&1; then
         # Assuming get_language_message is a function that might exist
         # to provide translations or special formatting.
-        final_message=$(get_language_message "\\033[1;32mCreated with ♡, Harsha ☺︎")
+        final_message=$(get_language_message "\\033[1;32mCreated with ♡, Harsha")
         echo -e "$final_message"
     else
         # Default fallback if the function doesn't exist
-        echo -e "\033[92mCreated with ♡, Harsha ☺︎\033[0m"
+        echo -e "\033[92mCreated with ♡, Harsha\033[0m"
     fi
 }
 
