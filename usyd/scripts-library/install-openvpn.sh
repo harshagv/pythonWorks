@@ -147,7 +147,15 @@ CLIENT_NAME="kali"
 OPENVPN_DIR="/etc/openvpn"
 
 #USER_HOME=$(eval echo ~$TARGET_USER)
-CLIENT_CONFIG="${HOME}/${CLIENT_NAME}.ovpn"
+CLIENT_NAME="kali"
+OPENVPN_DIR="/etc/openvpn"
+
+# Detect the non-root user who invoked sudo
+TARGET_USER=$(logname 2>/dev/null || echo $SUDO_USER)
+USER_HOME=$(eval echo ~$TARGET_USER)
+
+CLIENT_CONFIG="${USER_HOME}/${CLIENT_NAME}.ovpn"
+
 
 cat > $CLIENT_CONFIG <<EOF
 client
@@ -178,8 +186,14 @@ $(cat $OPENVPN_DIR/ta.key)
 </tls-auth>
 EOF
 
-chown "$USER:$USER" "$CLIENT_CONFIG"
-chmod 655 "$CLIENT_CONFIG"
+# Change ownership to the invoking non-root user
+chown "$TARGET_USER:$TARGET_USER" "$CLIENT_CONFIG"
+
+# Restrict permissions so only they can read/write
+chmod 600 "$CLIENT_CONFIG"
+
+print_success "Client config saved to $CLIENT_CONFIG (owned by $TARGET_USER)"
+
 
 # --- Function to display the final signature ---
 print_signature() {
@@ -195,48 +209,11 @@ print_signature() {
     fi
 }
 
-print_title "Step 11: Configuring Passwordless Sudo for File Transfer..."
-
-# Determine the non-root user who invoked sudo.
-# This is crucial for setting up the correct permissions.
-if [ -z "$SUDO_USER" ]; then
-    print_error "This script must be run via sudo by a regular user (e.g., 'sudo $0')."
-    print_error "Direct execution by the root user is not supported for this step."
-    exit 1
-fi
-
-# Define the new sudoers file for our user
-SUDOERS_FILE="/etc/sudoers.d/99-allow-file-transfer-${SUDO_USER}"
-
-# The content to be added to the sudoers file
-SUDOERS_CONTENT="${SUDO_USER} ALL=(ALL) NOPASSWD: /bin/cat, /bin/tar"
-
-# Check if the file already exists and contains the correct content
-if [ -f "$SUDOERS_FILE" ] && grep -qF -- "$SUDOERS_CONTENT" "$SUDOERS_FILE"; then
-    print_info "Sudoers rule for '${SUDO_USER}' already exists and is correct. Skipping."
-else
-    print_info "Creating sudoers rule for user '${SUDO_USER}' to allow passwordless file transfer."
-    
-    # Create the new sudoers file with the correct content and permissions.
-    # Using 'tee' as root ensures the file is written correctly.
-    echo "$SUDOERS_CONTENT" | sudo tee "$SUDOERS_FILE" > /dev/null
-    
-    # Set the correct, secure permissions for the sudoers file
-    sudo chmod 0440 "$SUDOERS_FILE"
-    
-    # Verify the syntax of the new file to prevent system issues
-    if visudo -c -f "$SUDOERS_FILE"; then
-        print_success "Successfully created and validated sudoers file: $SUDOERS_FILE"
-    else
-        print_error "Failed to create a valid sudoers file. Removing incorrect file."
-        sudo rm -f "$SUDOERS_FILE"
-        exit 1
-    fi
-fi
-
-
 print_info "[✔] Full OpenVPN Server & Client Setup installation complete."
 print_signature
+
+
+
 
 
 
@@ -244,10 +221,6 @@ print_signature
 # sudo apt update
 # sudo apt install openvpn network-manager-openvpn network-manager-openvpn-gnome -y
 # scp user@jump_host_ip:~/kali.ovpn ~/Downloads/
-## Method 1 (scp)
-# scp -o "ProxyCommand ssh user@jump_host_ip sudo cat %h:%p" localhost:/root/kali.ovpn .
-## Method 3 (tar)
-# ssh user@jump_host_ip "sudo tar -czf - -C /root kali.ovpn" | tar -xzf -
 # ip addr show tun0
 # http://<private_ip_of_app_vm>/dvwa/
 # sudo openvpn --config ~/Downloads/kali.ovpn
