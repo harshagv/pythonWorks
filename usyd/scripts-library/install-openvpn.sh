@@ -150,42 +150,16 @@ print_title "Step 10: Setting up UFW to allow OpenVPN traffic and enable forward
 
 ufw allow 1194/udp
 ufw allow OpenSSH
-ufw route allow in on tun0 out on ${EXTERNAL_IF}
+ufw route allow in on tun0 out on ${PUBLIC_IF}
 ufw allow ${FORWARD_FROM_PORT}/tcp
 
 # Adjust UFW before.rules for NAT
 if ! grep -q "# START OPENVPN RULES" /etc/ufw/before.rules; then
-  sed -i "1i# START OPENVPN RULES\n*nat\n:POSTROUTING ACCEPT [0:0]\n-A POSTROUTING -s 10.8.0.0/24 -o $EXTERNAL_IF -j MASQUERADE\nCOMMIT\n# END OPENVPN RULES\n" /etc/ufw/before.rules
+  sed -i "1i# START OPENVPN RULES\n*nat\n:POSTROUTING ACCEPT [0:0]\n-A POSTROUTING -s 10.8.0.0/24 -o $PUBLIC_IF -j MASQUERADE\nCOMMIT\n# END OPENVPN RULES\n" /etc/ufw/before.rules
 
 fi
 
 sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
-
-
-# # Define the NAT rules block
-# UFW_NAT_RULES="
-# # START OPENVPN & PORT FORWARDING RULES
-# *nat
-# :PREROUTING ACCEPT [0:0]
-# :POSTROUTING ACCEPT [0:0]
-# # 1. Port Forwarding Rule for the App on VM A
-# -A PREROUTING -i ${PUBLIC_IF} -p tcp --dport ${FORWARD_FROM_PORT} -j DNAT --to-destination ${APP_SERVER_IP}:${FORWARD_TO_PORT}
-# # 2. Masquerade traffic from VPN to the Internet
-# -A POSTROUTING -s ${VPN_NET} -o ${PUBLIC_IF} -j MASQUERADE
-# # 3. Masquerade traffic from VPN to the Private LAN
-# -A POSTROUTING -s ${VPN_NET} -d ${PRIVATE_NET} -o ${PRIVATE_IF} -j MASQUERADE
-# COMMIT
-# # END OPENVPN & PORT FORWARDING RULES
-# "
-
-# # Check if rules already exist, if not, prepend them to before.rules
-# if ! grep -q "# START OPENVPN & PORT FORWARDING RULES" /etc/ufw/before.rules; then
-#   print_info "Adding NAT rules to /etc/ufw/before.rules..."
-#   (echo "$UFW_NAT_RULES"; cat /etc/ufw/before.rules) > /tmp/before.rules.tmp
-#   mv /tmp/before.rules.tmp /etc/ufw/before.rules
-# else
-#   print_warn "NAT rules already seem to exist in /etc/ufw/before.rules. Skipping."
-# fi
 
 
 #USER_HOME=$(eval echo ~$TARGET_USER)
@@ -264,9 +238,8 @@ print_signature
 
 
 
-
-#!/bin/bash
 # Client Side
+#!/bin/bash
 # sudo apt update
 # sudo apt install openvpn openvpn-systemd-resolved network-manager-openvpn network-manager-openvpn-gnome -y
 # scp user@jump_host_ip:~/kali.ovpn ~/Downloads/
