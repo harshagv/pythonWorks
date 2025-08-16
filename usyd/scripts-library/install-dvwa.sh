@@ -185,7 +185,7 @@ EOF
     echo "======================================="
 }
 
-# --- Function to display the final signature ---
+# Function to display the final signature
 print_signature() {
     echo
     if command -v get_language_message >/dev/null 2>&1; then

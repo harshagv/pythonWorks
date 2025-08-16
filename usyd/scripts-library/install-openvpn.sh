@@ -20,14 +20,38 @@ print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
 
 set -e
 
-# === Config ===
+# Config
 EASYRSA_DIR="/etc/openvpn/easy-rsa"
 OPENVPN_DIR="/etc/openvpn"
 CLIENT_NAME="kali"
-SERVER_IP="192.88.100.11"  # <-- Replace this with your jump host publicNAT IP reachable by kali VM
+PUBLIC_IF_IP="192.88.100.11"       # <-- Replace this with your jump host publicNAT IP reachable by kali VM
+# PUBLIC_IF="enp0s9"               # <-- Replace this with your jump host publicNAT interface
+JUMP_HOST_PRIVATE_IP="10.0.10.5"   # <-- Replace this with the private IP of THIS jump host
+APP_SERVER_IP="10.0.10.10"         # <-- Replace this with private IP of your target app server (VM A)
+# PUBLIC_IF=$(ip route | grep default | awk '{print $5}')
 VPN_NET="10.8.0.0 255.255.255.0"
-EXTERNAL_IF="enp0s3"      # <-- Replace this with your jump host publicNAT interface
-# EXTERNAL_IF=$(ip route | grep default | awk '{print $5}')
+FORWARD_FROM_PORT=80
+
+# Automatically Detect Network Interfaces
+PUBLIC_IF=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+PRIVATE_IF=$(ip -4 route get ${APP_SERVER_IP} | grep -Po '(?<=dev )(\S+)' | head -1)
+PRIVATE_NET=$(ip -4 route get ${APP_SERVER_IP} | grep -Po '(?<=src )(\S+)' | head -1 | cut -d. -f1-3).0/24
+
+# Verification
+if [[ -z "$PUBLIC_IF" || -z "$PRIVATE_IF" ]]; then
+    print_error "Could not automatically detect public or private network interfaces."
+    print_info "Please set PUBLIC_IF and PRIVATE_IF manually at the top of the script."
+    exit 1
+fi
+
+print_title "Detected Network Configuration"
+print_info "Public IP:         ${PUBLIC_IF_IP}"
+print_info "Public Interface:    ${PUBLIC_IF}"
+print_info "Private Interface:   ${PRIVATE_IF}"
+print_info "Private Network:     ${PRIVATE_NET}"
+print_info "App Server IP:       ${APP_SERVER_IP}"
+echo "Press Enter to continue or Ctrl+C to cancel."
+read < /dev/tty
 
 # ALLOW port binding for port 80
 print_info "ALLOW port binding for port 80"
@@ -102,6 +126,10 @@ ifconfig-pool-persist ipp.txt
 push "redirect-gateway def1 bypass-dhcp"
 push "dhcp-option DNS 208.67.222.222"
 push "dhcp-option DNS 208.67.220.220"
+# --- PUSH ROUTES TO CLIENT ---
+push "route ${PRIVATE_NET}"
+push "redirect-gateway def1 bypass-dhcp"
+# --- END PUSH ROUTES ---
 keepalive 10 120
 cipher AES-256-CBC
 user nobody
@@ -122,6 +150,8 @@ print_title "Step 10: Setting up UFW to allow OpenVPN traffic and enable forward
 
 ufw allow 1194/udp
 ufw allow OpenSSH
+ufw route allow in on tun0 out on ${EXTERNAL_IF}
+ufw allow ${FORWARD_FROM_PORT}/tcp
 
 # Adjust UFW before.rules for NAT
 if ! grep -q "# START OPENVPN RULES" /etc/ufw/before.rules; then
@@ -132,18 +162,30 @@ fi
 sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
 
 
-# if ! grep -q "# START OPENVPN RULES" /etc/ufw/before.rules; then
-# cat <<EOF | cat - /etc/ufw/before.rules > /tmp/before.rules && mv /tmp/before.rules /etc/ufw/before.rules
-# # START OPENVPN RULES
+# # Define the NAT rules block
+# UFW_NAT_RULES="
+# # START OPENVPN & PORT FORWARDING RULES
 # *nat
+# :PREROUTING ACCEPT [0:0]
 # :POSTROUTING ACCEPT [0:0]
-# -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+# # 1. Port Forwarding Rule for the App on VM A
+# -A PREROUTING -i ${PUBLIC_IF} -p tcp --dport ${FORWARD_FROM_PORT} -j DNAT --to-destination ${APP_SERVER_IP}:${FORWARD_TO_PORT}
+# # 2. Masquerade traffic from VPN to the Internet
+# -A POSTROUTING -s ${VPN_NET} -o ${PUBLIC_IF} -j MASQUERADE
+# # 3. Masquerade traffic from VPN to the Private LAN
+# -A POSTROUTING -s ${VPN_NET} -d ${PRIVATE_NET} -o ${PRIVATE_IF} -j MASQUERADE
 # COMMIT
-# # END OPENVPN RULES
+# # END OPENVPN & PORT FORWARDING RULES
+# "
 
-# EOF
+# # Check if rules already exist, if not, prepend them to before.rules
+# if ! grep -q "# START OPENVPN & PORT FORWARDING RULES" /etc/ufw/before.rules; then
+#   print_info "Adding NAT rules to /etc/ufw/before.rules..."
+#   (echo "$UFW_NAT_RULES"; cat /etc/ufw/before.rules) > /tmp/before.rules.tmp
+#   mv /tmp/before.rules.tmp /etc/ufw/before.rules
+# else
+#   print_warn "NAT rules already seem to exist in /etc/ufw/before.rules. Skipping."
 # fi
-
 
 
 CLIENT_NAME="kali"
@@ -164,7 +206,7 @@ cat > $CLIENT_CONFIG <<EOF
 client
 dev tun
 proto udp
-remote $SERVER_IP 1194
+remote $PUBLIC_IF_IP 1194
 resolv-retry infinite
 nobind
 persist-key
@@ -226,7 +268,6 @@ print_signature
 
 
 
-# Client Side
 #!/bin/bash
 # Client Side
 # sudo apt update
@@ -241,9 +282,4 @@ print_signature
 # EOF
 # tail -n 3 ~/Downloads/kali.ovpn
 # sudo openvpn --config ~/Downloads/kali.ovpn
-
-
-# <NOT REQUIRED>
-# IN Jump Hosts
-# ssh -L 80:<target host>:80 user@<jump host> -N
 
