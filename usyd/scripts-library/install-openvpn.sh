@@ -128,7 +128,6 @@ push "dhcp-option DNS 208.67.222.222"
 push "dhcp-option DNS 208.67.220.220"
 # --- PUSH ROUTES TO CLIENT ---
 push "route ${PRIVATE_NET}"
-push "redirect-gateway def1 bypass-dhcp"
 # --- END PUSH ROUTES ---
 keepalive 10 120
 cipher AES-256-CBC
@@ -187,9 +186,6 @@ sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/d
 #   print_warn "NAT rules already seem to exist in /etc/ufw/before.rules. Skipping."
 # fi
 
-
-CLIENT_NAME="kali"
-OPENVPN_DIR="/etc/openvpn"
 
 #USER_HOME=$(eval echo ~$TARGET_USER)
 CLIENT_NAME="kali"
