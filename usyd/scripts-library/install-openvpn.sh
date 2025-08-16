@@ -245,18 +245,27 @@ print_signature
 # sudo apt install openvpn openvpn-systemd-resolved network-manager-openvpn network-manager-openvpn-gnome -y
 # scp user@jump_host_ip:~/kali.ovpn ~/Downloads/
 # ip addr show tun0
-# http://<private_ip_of_app_vm>/dvwa/
+# curl -I http://<private_ip_of_app_vm>/dvwa/login.php
 # tee -a ~/Downloads/kali.ovpn <<EOF
 # script-security 2
 # up /etc/openvpn/update-resolv-conf
 # down /etc/openvpn/update-resolv-conf
 # EOF
 # tail -n 3 ~/Downloads/kali.ovpn
-# sudo openvpn --config ~/Downloads/kali.ovpn
+#
+#
 # Replace with your VPN server's public IP
 # VPN_SERVER_IP="192.88.100.11" 
 # Delete the incorrect route that goes through your old gateway
 # sudo ip route del $VPN_SERVER_IP
 # sudo ip route add ${VPN_SERVER_IP}/32 dev eth0 
 # sudo openvpn --config ~/Downloads/kali.ovpn
+
+# <OR>
+# 
+# OVPN_FILE=~/Downloads/kali.ovpn
+# VPN_SERVER_IP=$(grep -E "^remote\s" "$OVPN_FILE" | awk '{print $2}' | head -n 1)
+# DEFAULT_GATEWAY=$(ip route | grep '^default' | awk '{print $3}' | head -n 1)
+# ROUTE_DIRECTIVE="route $VPN_SERVER_IP 255.255.255.255 $DEFAULT_GATEWAY"
+# echo "$ROUTE_DIRECTIVE" >> "$OVPN_FILE"
 # 
