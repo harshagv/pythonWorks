@@ -25,10 +25,9 @@ EASYRSA_DIR="/etc/openvpn/easy-rsa"
 OPENVPN_DIR="/etc/openvpn"
 CLIENT_NAME="kali"
 PUBLIC_IF_IP="192.88.100.11"       # <-- Replace this with your jump host publicNAT IP reachable by kali VM
-# PUBLIC_IF="enp0s9"               # <-- Replace this with your jump host publicNAT interface
 JUMP_HOST_PRIVATE_IP="10.0.10.5"   # <-- Replace this with the private IP of THIS jump host
 APP_SERVER_IP="10.0.10.10"         # <-- Replace this with private IP of your target app server (VM A)
-# PUBLIC_IF=$(ip route | grep default | awk '{print $5}')
+## PUBLIC_IF="enp0s9"               # <-- Replace this with your jump host publicNAT interface
 VPN_NET="10.8.0.0 255.255.255.0"
 FORWARD_FROM_PORT=80
 
