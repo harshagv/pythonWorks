@@ -59,7 +59,7 @@ setcap 'cap_net_bind_service=+ep' /usr/bin/ssh
 
 print_title "Step 1: Installing OpenVPN and EasyRSA (if needed).."
 apt update
-apt install -y openvpn easy-rsa
+apt install -y openvpn easy-rsa curl
 
 print_title "Step 2: Setting up EasyRSA (PKI).."
 
