@@ -45,6 +45,7 @@ install_ssh() {
     ufw status || true
     ufw enable
     ufw allow 22
+    ufw allow icmp
 
     echo "Restarting SSH service.."
     systemctl restart ssh
