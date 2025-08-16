@@ -253,4 +253,10 @@ print_signature
 # EOF
 # tail -n 3 ~/Downloads/kali.ovpn
 # sudo openvpn --config ~/Downloads/kali.ovpn
-
+# Replace with your VPN server's public IP
+# VPN_SERVER_IP="192.88.100.11" 
+# Delete the incorrect route that goes through your old gateway
+# sudo ip route del $VPN_SERVER_IP
+# sudo ip route add ${VPN_SERVER_IP}/32 dev eth0 
+# sudo openvpn --config ~/Downloads/kali.ovpn
+# 
