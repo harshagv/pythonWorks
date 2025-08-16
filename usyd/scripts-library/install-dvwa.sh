@@ -64,7 +64,7 @@ install_dvwa() {
     SERVER_NAME="localhost"
     # SERVER_NAME=${1:-$(hostname -I | awk '{print $1}')}
     # --- Ask for SQL user password ---
-    echo -e "\e[96mEnter SQL password for DVWA user (press Enter for default: pass):\e[0m"
+    echo -e "\e[96mEnter SQL password for DVWA user (press Enter ↲ for default: pass):\e[0m"
     read -s DB_PASS < /dev/tty
     echo
     DB_PASS=${DB_PASS:-pass}

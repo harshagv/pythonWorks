@@ -33,7 +33,8 @@ VPN_NET="10.8.0.0 255.255.255.0"
 FORWARD_FROM_PORT=80
 
 # Automatically Detect Network Interfaces
-PUBLIC_IF=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+#PUBLIC_IF=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+PUBLIC_IF=$(ip -o -4 addr list | awk -v ip="$PUBLIC_IF_IP" '$4 ~ ip {print $2}')
 PRIVATE_IF=$(ip -4 route get ${APP_SERVER_IP} | grep -Po '(?<=dev )(\S+)' | head -1)
 PRIVATE_NET=$(ip -4 route get ${APP_SERVER_IP} | grep -Po '(?<=src )(\S+)' | head -1 | cut -d. -f1-3).0/24
 
@@ -50,7 +51,7 @@ print_info "Public Interface:    ${PUBLIC_IF}"
 print_info "Private Interface:   ${PRIVATE_IF}"
 print_info "Private Network:     ${PRIVATE_NET}"
 print_info "App Server IP:       ${APP_SERVER_IP}"
-echo "Press Enter to continue or Ctrl+C to cancel."
+echo "Press Enter ↲ to continue or Ctrl+C to cancel."
 read < /dev/tty
 
 # ALLOW port binding for port 80
