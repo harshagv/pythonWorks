@@ -253,10 +253,10 @@ print_signature
 #
 #
 # Replace with your VPN server's public IP
-# VPN_SERVER_IP="192.88.100.11" 
+# JUMPHOST_PUBLIC_IP="192.88.100.11" 
 # Delete the incorrect route that goes through your old gateway
-# sudo ip route del $VPN_SERVER_IP
-# sudo ip route add ${VPN_SERVER_IP}/32 dev eth0 
+# sudo ip route del $JUMPHOST_PUBLIC_IP
+# sudo ip route add ${JUMPHOST_PUBLIC_IP}/32 dev eth0
 # sudo openvpn --config ~/Downloads/kali.ovpn
 
 # <OR>
@@ -267,6 +267,8 @@ print_signature
 # ROUTE_DIRECTIVE="route $VPN_SERVER_IP 255.255.255.255 $DEFAULT_GATEWAY"
 # echo "$ROUTE_DIRECTIVE" >> "$OVPN_FILE"
 # 
+
+sudo ip route add jump_host_public_ip/32 dev eth0
 
 # IN APP VM: 
 # sudo ip route add 10.8.0.0/24 via <jump_host_private_ip>
