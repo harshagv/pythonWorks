@@ -267,3 +267,6 @@ print_signature
 # ROUTE_DIRECTIVE="route $VPN_SERVER_IP 255.255.255.255 $DEFAULT_GATEWAY"
 # echo "$ROUTE_DIRECTIVE" >> "$OVPN_FILE"
 # 
+
+# IN APP VM: 
+# sudo ip route add 10.8.0.0/24 via <jump_host_private_ip>
