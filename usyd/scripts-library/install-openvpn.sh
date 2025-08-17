@@ -149,7 +149,6 @@ print_title "Step 10: Setting up UFW to allow OpenVPN traffic and enable forward
 
 ufw allow 1194/udp
 ufw allow OpenSSH
-ufw allow icmp
 ufw route allow in on tun0 out on ${PUBLIC_IF}
 ufw allow ${FORWARD_FROM_PORT}/tcp
 
