@@ -267,8 +267,10 @@ print_signature
 # ROUTE_DIRECTIVE="route $VPN_SERVER_IP 255.255.255.255 $DEFAULT_GATEWAY"
 # echo "$ROUTE_DIRECTIVE" >> "$OVPN_FILE"
 # 
-
-sudo ip route add jump_host_public_ip/32 dev eth0
+# 
+# ssh -L 80:<target host>:80 user@<jump host> -N
+# sudo setcap 'cap_net_bind_service=+ep' /usr/bin/ssh # IN JUMP HOST
+#
 
 # IN APP VM: 
 # sudo ip route add 10.8.0.0/24 via <jump_host_private_ip>
