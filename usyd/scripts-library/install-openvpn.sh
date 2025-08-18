@@ -122,6 +122,10 @@ auth SHA256
 tls-auth ta.key 0
 topology subnet
 server $VPN_NET
+# This route is for the SERVER's routing table. It ensures the server
+# knows how to send traffic back to the private LAN.
+# This is often handled automatically, but being explicit is good practice.
+route ${PRIVATE_NET} 255.255.255.0
 ifconfig-pool-persist ipp.txt
 push "redirect-gateway def1 bypass-dhcp"
 push "dhcp-option DNS 208.67.222.222"
@@ -129,6 +133,8 @@ push "dhcp-option DNS 208.67.220.220"
 # --- PUSH ROUTES TO CLIENT ---
 push "route ${PRIVATE_NET} 255.255.255.0"
 # --- END PUSH ROUTES ---
+# (Optional) Allow clients to see each other
+client-to-client
 keepalive 10 120
 cipher AES-256-CBC
 user nobody
@@ -248,6 +254,8 @@ print_signature
 # script-security 2
 # up /etc/openvpn/update-resolv-conf
 # down /etc/openvpn/update-resolv-conf
+# (Find gateway with: ip route | grep default)
+# route <JUMPHOST_PUBLIC_IP> 255.255.255.255 <Kali VM's DEFAULT GATEWAY IP>
 # EOF
 # tail -n 3 ~/Downloads/kali.ovpn
 #
