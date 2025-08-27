@@ -1,164 +1,178 @@
 #!/bin/bash
-# DVWA & SSH Auto Install Script for Ubuntu using NGINX + PHP-FPM + NAXSI WAF
-# Usage:
-#   sudo bash install-dvwa.sh          # Install SSH + DVWA
-#   sudo bash install-dvwa.sh ssh      # Install SSH only
-#   sudo bash install-dvwa.sh dvwa     # Install DVWA only
-
 set -e
 
-### ===== COLOR CONSTANTS ===== ###
 RESET="\033[0m"
 GREEN="\033[1;32m"
-RED="\033[1;31m"
-YELLOW="\033[1;33m"
-BLUE="\033[1;34m"
-PINK="\033[1;35m"
 CYAN="\033[1;36m"
+PINK="\033[1;35m"
 
-### ===== PRINT FUNCTIONS ===== ###
-print_info() { echo -e "${CYAN}[INFO]${RESET} $1"; }
-print_success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
-print_warn() { echo -e "${YELLOW}[WARNING]${RESET} $1"; }
-print_error() { echo -e "${RED}[ERROR]${RESET} $1"; }
-print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
+print_info() {
+  echo -e "${CYAN}[INFO]${RESET} $1"
+}
 
-### ===== FUNCTIONS ===== ###
+print_success() {
+  echo -e "${GREEN}[SUCCESS]${RESET} $1"
+}
+
+print_error() {
+  echo -e "\033[1;31m[ERROR]\033[0m $1"
+}
+
+print_title() {
+  echo -e "\n${PINK}=== $1 ===${RESET}\n"
+}
 
 install_ssh() {
-  print_title "=== STEP 1: Install and Configure OpenSSH Server ==="
-  echo "Updating system.."
+  print_title "Installing OpenSSH Server"
   apt update && apt upgrade -y
+  apt install -y openssh-server ufw net-tools curl
 
-  echo "Installing OpenSSH server and essentials.."
-  apt install -y openssh-server net-tools curl ufw
+  sed -i 's/^#Port 22/Port 22/' /etc/ssh/sshd_config
+  sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' /etc/ssh/sshd_config
+  sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
-  echo "Configuring SSH.."
-  SSHD_CONFIG="/etc/ssh/sshd_config"
-  sed -i 's/^#Port 22/Port 22/' "$SSHD_CONFIG"
-  sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' "$SSHD_CONFIG"
-  sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' "$SSHD_CONFIG"
-
-  echo "Configuring UFW firewall for SSH and ICMP.."
-  ufw status || true
-  ufw enable
   ufw allow 22
-
-  echo "Restarting SSH.."
+  ufw --force enable
   systemctl restart ssh
 
   print_success "OpenSSH server installed successfully!"
 }
 
+install_pcre2() {
+  print_title "Installing PCRE2 from official GitHub releases"
+
+  PCRE2_VER="10.45"
+  PCRE2_URL="https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${PCRE2_VER}/pcre2-${PCRE2_VER}.tar.gz"
+
+  cd /usr/local/src
+
+  if [ ! -d "pcre2-${PCRE2_VER}" ]; then
+    print_info "Downloading PCRE2 ${PCRE2_VER} source..."
+    wget -q --show-progress "${PCRE2_URL}" -O pcre2-${PCRE2_VER}.tar.gz
+
+    tar -xzf pcre2-${PCRE2_VER}.tar.gz
+    cd pcre2-${PCRE2_VER}
+    ./configure
+    make
+    make install
+    ldconfig
+  else
+    print_info "PCRE2 ${PCRE2_VER} already installed"
+  fi
+}
+
 install_dvwa_naxsi() {
-  print_title "=== STEP 2: DVWA with NGINX + PHP-FPM + NAXSI WAF ==="
+  print_title "Installing DVWA + NGINX + PHP-FPM + NAXSI"
 
   DB_NAME="dvwa"
   DB_USER="dvwa"
+  DB_PASS="pass"
   DB_HOST="localhost"
   WEB_DIR="/var/www/html/dvwa"
   SERVER_NAME="localhost"
 
-  echo -e "\e[96mEnter SQL password for DVWA user (press Enter ↲ for default: pass):\e[0m"
-  read -s DB_PASS < /dev/tty
-  echo
-  DB_PASS=${DB_PASS:-pass}
+  print_info "Installing dependencies..."
+  apt install -y nginx mariadb-server php-fpm php-mysql php-gd php-zip php-json php-bcmath php-xml git build-essential libssl-dev zlib1g-dev libpcre2-dev unzip
 
-  echo "Installing required packages: nginx, mariadb-server, php-fpm and extensions, git.."
-  apt install -y nginx mariadb-server php-fpm php-mysql php-gd php-zip php-json php-bcmath php-xml git build-essential libpcre3 libpcre3-dev libssl-dev zlib1g-dev
+  NGINX_VER=$(nginx -v 2>&1 | grep -o '[0-9.]*')
 
-  # Install Naxsi by compiling
-  print_info "Downloading and compiling Naxsi module for NGINX.."
   cd /usr/local/src
-  if [ ! -d "naxsi" ]; then
-    git clone https://github.com/nbs-system/naxsi.git
+
+  if [ ! -d "nginx-${NGINX_VER}" ]; then
+    print_info "Downloading nginx-${NGINX_VER} source..."
+    wget "http://nginx.org/download/nginx-${NGINX_VER}.tar.gz"
+    tar -xzf nginx-${NGINX_VER}.tar.gz
+  fi
+
+  if [ ! -d "/usr/local/src/naxsi" ]; then
+    print_info "Cloning Naxsi with recursive submodules..."
+    git clone --recurse-submodules https://github.com/wargio/naxsi.git /usr/local/src/naxsi
+  fi
+
+  TARGET_USER=$(logname 2>/dev/null || echo $SUDO_USER || echo $(whoami))
+  print_info "Adjusting ownership of /usr/local/src/naxsi to $TARGET_USER"
+  sudo chown -R "$TARGET_USER:$TARGET_USER" /usr/local/src/naxsi
+
+  cd /usr/local/src/naxsi
+  git pull
+  git submodule sync --recursive
+  git submodule update --init --recursive
+  git submodule foreach --recursive git pull origin main || true
+
+  if [ -f "/usr/local/src/naxsi/naxsi_rules/naxsi_core.rules" ]; then
+    mkdir -p /etc/nginx/naxsi
+    cp /usr/local/src/naxsi/naxsi_rules/naxsi_core.rules /etc/nginx/naxsi/
   else
-    print_info "Naxsi repo exists, skipping clone"
+    print_error "Naxsi core rules file not found in /usr/local/src/naxsi/naxsi_rules."
+    exit 1
   fi
 
-  cd naxsi/naxsi_src
-  make
-  make install
+  cd /usr/local/src/nginx-${NGINX_VER}
+  print_info "Configuring NGINX with Naxsi dynamic module..."
+  ./configure --with-compat --add-dynamic-module=../naxsi/naxsi_src --with-http_ssl_module
 
-  # Download nginx source to compile with Naxsi
-  cd /usr/local/src
-  nginx_version=$(nginx -v 2>&1 | grep -o '[0-9\.]*' || echo "1.18.0")
-  if [ ! -d "nginx-$nginx_version" ]; then
-    wget http://nginx.org/download/nginx-${nginx_version}.tar.gz
-    tar -xzvf nginx-${nginx_version}.tar.gz
-  fi
-
-  cd nginx-${nginx_version}
-
-  # Recompile nginx with naxsi module - This exact step depends on your environment,
-  # Alternatively use pre-built dynamic module or install from OS repository if available.
-  ./configure --with-compat --add-dynamic-module=/usr/local/src/naxsi/naxsi_src
+  print_info "Building Naxsi dynamic module..."
   make modules
-  cp objs/ngx_http_naxsi_module.so /etc/nginx/modules
 
-  # Configure nginx to load naxsi module
-  if ! grep -q "naxsi_module" /etc/nginx/nginx.conf; then
+  MODULES_DIR=$(nginx -V 2>&1 | grep -- '--modules-path' | sed -e "s/.*=//")
+  if [ ! -d "$MODULES_DIR" ]; then
+    mkdir -p "$MODULES_DIR"
+  fi
+
+  cp objs/ngx_http_naxsi_module.so "$MODULES_DIR/"
+
+  if ! grep -q "load_module modules/ngx_http_naxsi_module.so;" /etc/nginx/nginx.conf; then
     sed -i '1i load_module modules/ngx_http_naxsi_module.so;' /etc/nginx/nginx.conf
   fi
 
-  # Download and configure naxsi config
-  mkdir -p /etc/nginx/naxsi
-  cp /usr/local/src/naxsi/naxsi_config/naxsi_core.rules /etc/nginx/naxsi/
-  cp /usr/local/src/naxsi/naxsi_config/naxsi_basic.rules /etc/nginx/naxsi/
+  # Include naxsi_core.rules inside the http context of nginx.conf if not already included
+  if ! grep -q "include /etc/nginx/naxsi/naxsi_core.rules;" /etc/nginx/nginx.conf; then
+    sed -i '/http {/a \    include /etc/nginx/naxsi/naxsi_core.rules;' /etc/nginx/nginx.conf
+  fi
 
-  # Create nginx server block for DVWA with PHP-FPM + NAXSI in learning mode
-  cat <<EOF > /etc/nginx/sites-available/dvwa
+  cat > /etc/nginx/sites-available/dvwa <<EOF
 server {
   listen 80;
-  server_name $SERVER_NAME;
-
-  root $WEB_DIR;
-  index index.php index.html index.htm;
+  server_name ${SERVER_NAME};
+  root ${WEB_DIR};
+  index index.php index.html;
 
   location / {
     try_files \$uri \$uri/ /index.php?\$args;
+    SecRulesEnabled;
+    LearningMode;
   }
 
-  location ~ \.php$ {
-      include snippets/fastcgi-php.conf;
-      fastcgi_pass unix:/run/php/php-fpm.sock;
-      fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-      include fastcgi_params;
-  }
-
-  location /naxsi_rules {
-      include /etc/nginx/naxsi/naxsi_core.rules;
-      include /etc/nginx/naxsi/naxsi_basic.rules;
-      SecRulesEnabled;
-      LearningMode;
+  location ~ \.php\$ {
+    include snippets/fastcgi-php.conf;
+    fastcgi_pass unix:/run/php/php-fpm.sock;
+    fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+    include fastcgi_params;
   }
 
   error_page 403 /403.html;
   location = /403.html {
-      root /usr/share/nginx/html;
-      internal;
+    root /usr/share/nginx/html;
+    internal;
   }
 }
 EOF
 
-  ln -sf /etc/nginx/sites-available/dvwa /etc/nginx/sites-enabled/dvwa
+  ln -sf /etc/nginx/sites-available/dvwa /etc/nginx/sites-enabled/
   rm -f /etc/nginx/sites-enabled/default
 
-  print_info "Downloading DVWA source code.."
   cd /var/www/html
-  if [ -d "DVWA" ] || [ -d "dvwa" ]; then
-      echo "DVWA directory exists, skipping clone.."
+  if [ ! -d dvwa ]; then
+    print_info "Cloning DVWA repo..."
+    git clone https://github.com/digininja/DVWA.git dvwa
   else
-      git clone https://github.com/digininja/DVWA.git
-      mv DVWA dvwa
+    print_info "DVWA directory exists, skipping clone."
   fi
 
-  print_info "Setting ownership and permissions.."
-  chown -R www-data:www-data $WEB_DIR
-  chmod -R 755 $WEB_DIR
+  chown -R www-data:www-data "${WEB_DIR}"
+  chmod -R 755 "${WEB_DIR}"
 
-  print_info "Configuring MariaDB.."
-  systemctl enable mariadb --now
+  systemctl enable mariadb nginx --now
 
   mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS ${DB_NAME};
@@ -167,37 +181,44 @@ GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'${DB_HOST}';
 FLUSH PRIVILEGES;
 EOF
 
-  print_info "Adjusting PHP settings as needed.."
-  PHPINI="/etc/php/$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')/fpm/php.ini"
-  sed -i 's/^;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' "$PHPINI"
+  PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+  PHP_INI="/etc/php/${PHP_VER}/fpm/php.ini"
 
-  print_info "Restarting PHP-FPM and NGINX.."
-  systemctl enable php$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')-fpm --now
-  systemctl enable nginx --now
+  # Fix php.ini setting
+  sed -i 's/^;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' "${PHP_INI}"
 
-  print_success "[✔] DVWA configured successfully with NGINX + PHP-FPM + NAXSI!"
-  print_title "Access DVWA at http://${SERVER_NAME}/dvwa/setup.php"
-  print_title "Default DB User: ${DB_USER}, Password: ${DB_PASS}"
-  print_title "DVWA default: Username 'admin', Password 'password'"
+  # Check if the PHP-FPM service for the detected PHP version exists
+  PHP_FPM_SERVICE="php${PHP_VER}-fpm.service"
+
+  # Check if the correct PHP-FPM service exists before proceeding
+  if systemctl list-units --type=service | grep -q "php${PHP_VER}-fpm.service"; then
+    systemctl enable php${PHP_VER}-fpm --now
+    systemctl restart php${PHP_VER}-fpm
+  else
+    print_error "PHP-FPM service php${PHP_VER}-fpm not found!"
+    exit 1
+  fi
+
+  # Enable other services (mariadb and nginx)
+  systemctl enable mariadb nginx --now
+
+  print_success "DVWA + NGINX + PHP-FPM + NAXSI installed successfully"
+  print_info "Access DVWA setup at: http://${SERVER_NAME}/dvwa/setup.php"
+  print_info "Default credentials: admin / password"
 }
 
-### ===== MAIN LOGIC ===== ###
 case "$1" in
-    "ssh")
-        install_ssh
-        print_info "[✔] SSH-only installation complete."
-        ;;
-    "dvwa")
-        install_dvwa_naxsi
-        print_info "[✔] DVWA + with NGINX + PHP-FPM + NAXSI WAF installation complete."
-        ;;
-    "")
-        install_ssh
-        install_dvwa_naxsi
-        print_info "[✔] Full SSH + DVWA + with NGINX + PHP-FPM + NAXSI WAF installation complete."
-        ;;
-    *)
-        echo "Usage: $0 [ssh|dvwa]"
-        exit 1
-        ;;
+  ssh)
+    install_ssh
+    ;;
+  dvwa)
+    install_pcre2
+    install_dvwa_naxsi
+    ;;
+  *)
+    install_ssh
+    install_pcre2
+    install_dvwa_naxsi
+    ;;
 esac
+
