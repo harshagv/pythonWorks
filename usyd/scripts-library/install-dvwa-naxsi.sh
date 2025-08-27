@@ -144,7 +144,7 @@ install_dvwa_naxsi() {
   cat >/etc/nginx/naxsi/naxsi.rules <<EOF
 SecRulesEnabled;
 DeniedUrl "/naxsi";
-##LearningMode
+#LearningMode
 CheckRule "\$SQL >= 8" BLOCK;
 CheckRule "\$RFI >= 8" BLOCK;
 CheckRule "\$TRAVERSAL >= 4" BLOCK;
