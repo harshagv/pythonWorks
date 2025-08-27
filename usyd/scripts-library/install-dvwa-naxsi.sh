@@ -9,7 +9,7 @@
 #
 #   # Blocked XSS test (should Blocked by NAXSI):
 #   curl 'http://localhost/?q=><script>alert(0)</script>'
-#   <OR> Open this in browser: http://localhost/?q=><script>alert('XSS alert! Message stored');</script> Hello, this is my stored message
+#   <OR> Open this in browser: "http://localhost/?q=><script>alert('XSS alert! Message stored');</script> Hello, this is my stored message"
 #
 #   # Blocked SQLi test (should Blocked by NAXSI):
 #   curl "http://localhost/?q=1%27%20or%20%221%22=%221"
@@ -21,6 +21,7 @@
 #   # To switch NAXSI to LearningMode, edit /etc/nginx/naxsi/naxsi.rules:
 #   # Add 'LearningMode;' to the top, then reload nginx:
 #   sudo systemctl reload nginx
+#   sudo systemctl restart nginx
 #   # Now both curl tests will not be blocked, but attacks will still be logged.
 # ------------------------------------------------------------------------------
 
