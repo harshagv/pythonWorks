@@ -1,38 +1,43 @@
 #!/bin/bash
+# DVWA & SSH Auto Install Script for Ubuntu using NGINX + PHP-FPM + NAXSI WAF
+# Usage:
+#   sudo bash install-dvwa.sh          # Install SSH + DVWA + NGINX + PHP-FPM + NAXSI WAF
+#   sudo bash install-dvwa.sh ssh      # Install SSH only
+#   sudo bash install-dvwa.sh dvwa     # Install DVWA + NGINX + PHP-FPM + NAXSI WAF only
+
 set -e
 
+### ===== COLOR CONSTANTS ===== ###
 RESET="\033[0m"
 GREEN="\033[1;32m"
-CYAN="\033[1;36m"
+RED="\033[1;31m"
+YELLOW="\033[1;33m"
+BLUE="\033[1;34m"
 PINK="\033[1;35m"
+CYAN="\033[1;36m"
 
-print_info() {
-  echo -e "${CYAN}[INFO]${RESET} $1"
-}
-
-print_success() {
-  echo -e "${GREEN}[SUCCESS]${RESET} $1"
-}
-
-print_error() {
-  echo -e "\033[1;31m[ERROR]\033[0m $1"
-}
-
-print_title() {
-  echo -e "\n${PINK}=== $1 ===${RESET}\n"
-}
+### ===== PRINT FUNCTIONS ===== ###
+print_info() { echo -e "${CYAN}[INFO]${RESET} $1"; }
+print_success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
+print_warn() { echo -e "${YELLOW}[WARNING]${RESET} $1"; }
+print_error() { echo -e "${RED}[ERROR]${RESET} $1"; }
+print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
 
 install_ssh() {
   print_title "Installing OpenSSH Server"
   apt update && apt upgrade -y
   apt install -y openssh-server ufw net-tools curl
 
-  sed -i 's/^#Port 22/Port 22/' /etc/ssh/sshd_config
-  sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' /etc/ssh/sshd_config
-  sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  echo "Configuring SSH.."
+  SSHD_CONFIG="/etc/ssh/sshd_config"
+  sed -i 's/^#Port 22/Port 22/' "$SSHD_CONFIG"
+  sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' "$SSHD_CONFIG"
+  sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' "$SSHD_CONFIG"
 
   ufw allow 22
   ufw --force enable
+
+  echo "Restarting SSH.."
   systemctl restart ssh
 
   print_success "OpenSSH server installed successfully!"
@@ -62,7 +67,7 @@ install_pcre2() {
 }
 
 install_dvwa_naxsi() {
-  print_title "Installing DVWA + NGINX + PHP-FPM + NAXSI"
+  print_title "STEP 2: Installing DVWA with NGINX + PHP-FPM + NAXSI WAF"
 
   DB_NAME="dvwa"
   DB_USER="dvwa"
@@ -194,9 +199,9 @@ EOF
   fi
 
   # Set ownership and permissions
-  chown -R www-data:www-data "${WEB_DIR}"
-  find "${WEB_DIR}" -type d -exec chmod 755 {} \;
-  find "${WEB_DIR}" -type f -exec chmod 644 {} \;
+  chown -R www-data:www-data "${HTML_ROOT_DIR}"
+  find "${HTML_ROOT_DIR}" -type d -exec chmod 755 {} \;
+  find "${HTML_ROOT_DIR}" -type f -exec chmod 644 {} \;
 
   # Create 403 error page if missing
   if [ ! -f /usr/share/nginx/html/403.html ]; then
@@ -206,6 +211,11 @@ EOF
 
   # Enable and start services
   systemctl enable mariadb nginx --now
+
+  echo -e "\e[96mEnter SQL password for DVWA user (press Enter ↲ for default: pass):\e[0m"
+  read -s DB_PASS < /dev/tty
+  echo
+  DB_PASS=${DB_PASS:-pass}
 
   mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS ${DB_NAME};
