@@ -172,6 +172,21 @@ CheckRule "\$EVADE >= 4" BLOCK;
 CheckRule "\$XSS >= 8" BLOCK;
 EOF
 
+  # Create Naxsi blocked page if missing
+  if [ ! -f /usr/share/nginx/html/naxsi.html ]; then
+    mkdir -p /usr/share/nginx/html
+    cat > /usr/share/nginx/html/naxsi.html <<EOL
+  <html>
+  <head><title>Request Blocked</title></head>
+  <body>
+  <h1>Request Blocked by NAXSI Web Application Firewall</h1>
+  <p>Your request was rejected due to security policy violation.</p>
+  </body>
+  </html>
+  EOL
+    print_info "Created NAXSI blocked page at /usr/share/nginx/html/naxsi.html"
+  fi
+
   PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
   PHP_FPM_SOCK="/run/php/php${PHP_VER}-fpm.sock"
 
