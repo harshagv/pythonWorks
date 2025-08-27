@@ -4,6 +4,23 @@
 #   sudo bash install-dvwa.sh          # Install SSH + DVWA + NGINX + PHP-FPM + NAXSI WAF
 #   sudo bash install-dvwa.sh ssh      # Install SSH only
 #   sudo bash install-dvwa.sh dvwa     # Install DVWA + NGINX + PHP-FPM + NAXSI WAF only
+# ------------------------------------------------------------------------------
+# TESTING NAXSI WAF: To confirm NAXSI is working and blocking attacks, run:
+#
+#   # Blocked XSS test (should return 403 Forbidden):
+#   curl "http://localhost/dvwa/?q=\"><script>alert(0)</script>"
+#
+#   # Blocked SQLi test (should return 403 Forbidden):
+#   curl "http://localhost/dvwa/?q=1\" or \"1\"=\"1"
+#
+#   # To see NAXSI logs and details, run this in another terminal:
+#   sudo tail -f /var/log/nginx/error.log
+#
+#   # To switch NAXSI to LearningMode, edit /etc/nginx/naxsi/naxsi.rules:
+#   # Add 'LearningMode;' to the top, then reload nginx:
+#   sudo systemctl reload nginx
+#   # Now both curl tests will not be blocked, but attacks will still be logged.
+# ------------------------------------------------------------------------------
 
 set -e
 
@@ -309,3 +326,4 @@ case "$1" in
         exit 1
         ;;
 esac
+
