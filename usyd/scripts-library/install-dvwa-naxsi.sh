@@ -152,6 +152,9 @@ CheckRule "\$EVADE >= 4" BLOCK;
 CheckRule "\$XSS >= 8" BLOCK;
 EOF
 
+  PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+  PHP_FPM_SOCK="/run/php/php${PHP_VER}-fpm.sock"
+
   # Setup Nginx site config for DVWA
   cat >/etc/nginx/sites-available/dvwa <<EOF
 server {
@@ -173,7 +176,7 @@ server {
 
   location ~ \\.php\$ {
     include snippets/fastcgi-php.conf;
-    fastcgi_pass unix:/run/php/php-fpm.sock;
+    fastcgi_pass unix:${PHP_FPM_SOCK};
     fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
     include fastcgi_params;
   }
@@ -243,7 +246,6 @@ EOF
   # Setup PHP config (for NGINX FPM, not Apache):
   print_info "Configuring PHP settings for DVWA.."
   # Setup PHP config for security and ensure PHP-FPM service matches socket
-  PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
   PHPINI="/etc/php/${PHP_VER}/fpm/php.ini"
   sed -i 's/^\s*allow_url_fopen\s*=.*/allow_url_fopen = On/' "$PHPINI"
   sed -i 's/^\s*allow_url_include\s*=.*/allow_url_include = On/' "$PHPINI"
@@ -274,7 +276,7 @@ print_signature() {
         echo -e "$final_message"
     else
         # Default fallback if the function doesn't exist
-        echo -e "\n\033[92mCreated with ♡, Harsha\033[0m"
+        echo -e "\n\033[92mCreated with ♡, Harsha\033[0m\n"
     fi
 }
 
