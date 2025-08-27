@@ -191,6 +191,10 @@ server {
     include /etc/nginx/naxsi/naxsi.rules;
   }
 
+  location = /dvwa/ {
+    return 302 /dvwa/login.php;
+  }
+
   location ~ \\.php\$ {
     include snippets/fastcgi-php.conf;
     fastcgi_pass unix:${PHP_FPM_SOCK};
