@@ -121,29 +121,51 @@ install_dvwa_naxsi() {
 
   cp objs/ngx_http_naxsi_module.so "$MODULES_DIR/"
 
+  # Copy module from build to /usr/lib/nginx/modules (required by nginx.conf)
+  mkdir -p /usr/lib/nginx/modules
+  cp objs/ngx_http_naxsi_module.so /usr/lib/nginx/modules/
+
   if ! grep -q "load_module modules/ngx_http_naxsi_module.so;" /etc/nginx/nginx.conf; then
     sed -i '1i load_module modules/ngx_http_naxsi_module.so;' /etc/nginx/nginx.conf
   fi
 
-  # Include naxsi_core.rules inside the http context of nginx.conf if not already included
+  # Ensure core rules included in nginx.conf http block
   if ! grep -q "include /etc/nginx/naxsi/naxsi_core.rules;" /etc/nginx/nginx.conf; then
     sed -i '/http {/a \    include /etc/nginx/naxsi/naxsi_core.rules;' /etc/nginx/nginx.conf
   fi
 
-  cat > /etc/nginx/sites-available/dvwa <<EOF
+  # Create NAXSI local rules file with basic config and attack checks
+  cat >/etc/nginx/naxsi/naxsi.rules <<EOF
+SecRulesEnabled;
+DeniedUrl "/naxsi";
+
+CheckRule "\$SQL >= 8" BLOCK;
+CheckRule "\$RFI >= 8" BLOCK;
+CheckRule "\$TRAVERSAL >= 4" BLOCK;
+CheckRule "\$EVADE >= 4" BLOCK;
+CheckRule "\$XSS >= 8" BLOCK;
+EOF
+
+  # Setup Nginx site config for DVWA
+  cat >/etc/nginx/sites-available/dvwa <<EOF
 server {
   listen 80;
   server_name ${SERVER_NAME};
   root ${WEB_DIR};
   index index.php index.html;
 
-  location / {
-    try_files \$uri \$uri/ /index.php?\$args;
-    SecRulesEnabled;
-    LearningMode;
+  location /naxsi {
+    internal;
+    root /usr/share/nginx/html;
+    try_files /naxsi.html =404;
   }
 
-  location ~ \.php\$ {
+  location / {
+    try_files \$uri \$uri/ /index.php?\$args;
+    include /etc/nginx/naxsi/naxsi.rules;
+  }
+
+  location ~ \\.php\$ {
     include snippets/fastcgi-php.conf;
     fastcgi_pass unix:/run/php/php-fpm.sock;
     fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
@@ -158,6 +180,7 @@ server {
 }
 EOF
 
+  # Link site config and remove default site
   ln -sf /etc/nginx/sites-available/dvwa /etc/nginx/sites-enabled/
   rm -f /etc/nginx/sites-enabled/default
 
@@ -169,10 +192,19 @@ EOF
     print_info "DVWA directory exists, skipping clone."
   fi
 
+  # Set ownership and permissions
   chown -R www-data:www-data "${WEB_DIR}"
-  chmod -R 755 "${WEB_DIR}"
+  find "${WEB_DIR}" -type d -exec chmod 755 {} \;
+  find "${WEB_DIR}" -type f -exec chmod 644 {} \;
 
-  systemctl enable mariadb nginx --now
+  # Create 403 error page if missing
+  if [ ! -f /usr/share/nginx/html/403.html ]; then
+    mkdir -p /usr/share/nginx/html
+    echo "<html><body><h1>403 Forbidden</h1><p>Access denied.</p></body></html>" > /usr/share/nginx/html/403.html
+  fi
+
+  # Enable and start services
+  systemctl enable mariadb nginx php-fpm --now
 
   mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS ${DB_NAME};
@@ -181,16 +213,12 @@ GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'${DB_HOST}';
 FLUSH PRIVILEGES;
 EOF
 
+  # Setup PHP config for security and ensure PHP-FPM service matches socket
   PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
   PHP_INI="/etc/php/${PHP_VER}/fpm/php.ini"
 
-  # Fix php.ini setting
   sed -i 's/^;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' "${PHP_INI}"
 
-  # Check if the PHP-FPM service for the detected PHP version exists
-  PHP_FPM_SERVICE="php${PHP_VER}-fpm.service"
-
-  # Check if the correct PHP-FPM service exists before proceeding
   if systemctl list-units --type=service | grep -q "php${PHP_VER}-fpm.service"; then
     systemctl enable php${PHP_VER}-fpm --now
     systemctl restart php${PHP_VER}-fpm
@@ -198,9 +226,6 @@ EOF
     print_error "PHP-FPM service php${PHP_VER}-fpm not found!"
     exit 1
   fi
-
-  # Enable other services (mariadb and nginx)
-  systemctl enable mariadb nginx --now
 
   print_success "DVWA + NGINX + PHP-FPM + NAXSI installed successfully"
   print_info "Access DVWA setup at: http://${SERVER_NAME}/dvwa/setup.php"
@@ -221,4 +246,3 @@ case "$1" in
     install_dvwa_naxsi
     ;;
 esac
-
