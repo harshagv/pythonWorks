@@ -7,11 +7,13 @@
 # ------------------------------------------------------------------------------
 # TESTING NAXSI WAF: To confirm NAXSI is working and blocking attacks, run:
 #
-#   # Blocked XSS test (should return 403 Forbidden):
-#   curl "http://localhost/dvwa/?q=\"><script>alert(0)</script>"
+#   # Blocked XSS test (should Blocked by NAXSI):
+#   curl 'http://localhost/?q=><script>alert(0)</script>'
+#   <OR> Open this in browser: http://localhost/?q=><script>alert('XSS alert! Message stored');</script> Hello, this is my stored message
 #
-#   # Blocked SQLi test (should return 403 Forbidden):
-#   curl "http://localhost/dvwa/?q=1\" or \"1\"=\"1"
+#   # Blocked SQLi test (should Blocked by NAXSI):
+#   curl "http://localhost/?q=1%27%20or%20%221%22=%221"
+#   <OR> Open this in browser: "http://localhost/?q=1\' or \"1\"=\"1"
 #
 #   # To see NAXSI logs and details, run this in another terminal:
 #   sudo tail -f /var/log/nginx/error.log
@@ -160,8 +162,8 @@ install_dvwa_naxsi() {
   # Create NAXSI local rules file with basic config and attack checks
   cat >/etc/nginx/naxsi/naxsi.rules <<EOF
 SecRulesEnabled;
+#LearningMode;
 DeniedUrl "/naxsi";
-#LearningMode
 CheckRule "\$SQL >= 8" BLOCK;
 CheckRule "\$RFI >= 8" BLOCK;
 CheckRule "\$TRAVERSAL >= 4" BLOCK;
@@ -189,10 +191,6 @@ server {
   location / {
     try_files \$uri \$uri/ /index.php?\$args;
     include /etc/nginx/naxsi/naxsi.rules;
-  }
-
-  location = /dvwa/ {
-    return 302 /dvwa/login.php;
   }
 
   location ~ \\.php\$ {
