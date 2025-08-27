@@ -69,6 +69,7 @@ install_dvwa_naxsi() {
   DB_PASS="pass"
   DB_HOST="localhost"
   WEB_DIR="/var/www/html/dvwa"
+  HTML_ROOT_DIR="/var/www/html"
   SERVER_NAME="localhost"
 
   print_info "Installing dependencies..."
@@ -151,7 +152,7 @@ EOF
 server {
   listen 80;
   server_name ${SERVER_NAME};
-  root ${WEB_DIR};
+  root ${HTML_ROOT_DIR};
   index index.php index.html;
 
   location /naxsi {
@@ -204,7 +205,7 @@ EOF
   fi
 
   # Enable and start services
-  systemctl enable mariadb nginx php-fpm --now
+  systemctl enable mariadb nginx --now
 
   mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS ${DB_NAME};
@@ -212,6 +213,29 @@ CREATE USER IF NOT EXISTS '${DB_USER}'@'${DB_HOST}' IDENTIFIED BY '${DB_PASS}';
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'${DB_HOST}';
 FLUSH PRIVILEGES;
 EOF
+
+  # DVWA config file setup
+  print_info "Updating DVWA config file.."
+  cd "$WEB_DIR/config"
+  cp -n config.inc.php.dist config.inc.php
+  CONFIG_FILE="$WEB_DIR/config/config.inc.php"
+  if [ ! -f "$CONFIG_FILE" ]; then
+      print_error "Error: Configuration file not found at $CONFIG_FILE"
+      exit 1
+  fi
+  sed -i 's/\r//g' "$CONFIG_FILE"
+  sed -i "/'db_server'/c\\\$_DVWA[ 'db_server' ] = '$DB_HOST';" "$CONFIG_FILE"
+  sed -i "/'db_user'/c\\\$_DVWA[ 'db_user' ] = '$DB_USER';" "$CONFIG_FILE"
+  sed -i "/'db_password'/c\\\$_DVWA[ 'db_password' ] = '$DB_PASS';" "$CONFIG_FILE"
+  print_info "Configuration file updated successfully."
+
+  # ... nginx sites, DB provisioning & PHP setup ...
+  # Setup PHP config (for NGINX FPM, not Apache):
+  print_info "Configuring PHP settings for DVWA.."
+  PHPINI="/etc/php/${PHP_VER}/fpm/php.ini"
+  sed -i 's/^\s*allow_url_fopen\s*=.*/allow_url_fopen = On/' "$PHPINI"
+  sed -i 's/^\s*allow_url_include\s*=.*/allow_url_include = On/' "$PHPINI"
+  print_info "PHP settings updated (allow_url_fopen, allow_url_include)"
 
   # Setup PHP config for security and ensure PHP-FPM service matches socket
   PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
@@ -232,17 +256,46 @@ EOF
   print_info "Default credentials: admin / password"
 }
 
+# Function to display the final signature
+print_signature() {
+    echo
+    if command -v get_language_message >/dev/null 2>&1; then
+        # Assuming get_language_message is a function that might exist
+        # to provide translations or special formatting.
+        final_message=$(get_language_message "\\033[1;32mCreated with ♡, Harsha")
+        echo -e "$final_message"
+    else
+        # Default fallback if the function doesn't exist
+        echo -e "\n\033[92mCreated with ♡, Harsha\033[0m"
+    fi
+}
+
+### ===== MAIN LOGIC ===== ###
 case "$1" in
-  ssh)
-    install_ssh
-    ;;
-  dvwa)
-    install_pcre2
-    install_dvwa_naxsi
-    ;;
-  *)
-    install_ssh
-    install_pcre2
-    install_dvwa_naxsi
-    ;;
+    "ssh")
+        # Handle the 'ssh' argument
+        install_ssh
+        print_info "[✔] SSH-only installation complete."
+        print_signature # Call the signature function
+        ;;
+    "dvwa")
+        # Handle the 'dvwa' argument
+        install_pcre2
+        install_dvwa_naxsi
+        print_info "[✔] DVWA + NAXSI installation complete."
+        print_signature # Call the signature function
+        ;;
+    "")
+        # Handle the empty argument (no argument provided)
+        install_ssh
+        install_pcre2
+        install_dvwa_naxsi
+        print_info "[✔] Full SSH + DVWA installation complete."
+        print_signature # Call the signature function
+        ;;
+    *)
+        # Handle all other (invalid) arguments
+        echo "Usage: $0 [ssh]"
+        exit 1
+        ;;
 esac
