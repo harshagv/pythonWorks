@@ -242,16 +242,14 @@ EOF
   # ... nginx sites, DB provisioning & PHP setup ...
   # Setup PHP config (for NGINX FPM, not Apache):
   print_info "Configuring PHP settings for DVWA.."
+  # Setup PHP config for security and ensure PHP-FPM service matches socket
+  PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
   PHPINI="/etc/php/${PHP_VER}/fpm/php.ini"
   sed -i 's/^\s*allow_url_fopen\s*=.*/allow_url_fopen = On/' "$PHPINI"
   sed -i 's/^\s*allow_url_include\s*=.*/allow_url_include = On/' "$PHPINI"
   print_info "PHP settings updated (allow_url_fopen, allow_url_include)"
 
-  # Setup PHP config for security and ensure PHP-FPM service matches socket
-  PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-  PHP_INI="/etc/php/${PHP_VER}/fpm/php.ini"
-
-  sed -i 's/^;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' "${PHP_INI}"
+  sed -i 's/^;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' "${PHPINI}"
 
   if systemctl list-units --type=service | grep -q "php${PHP_VER}-fpm.service"; then
     systemctl enable php${PHP_VER}-fpm --now
