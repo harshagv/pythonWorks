@@ -269,8 +269,11 @@ EOF
   # Enable and start services
   systemctl enable mariadb nginx --now
 
+  # Prompt for DVWA SQL password with 20-second timeout, defaulting to "pass" if no input
   echo -e "\e[96mEnter SQL password for DVWA user (press Enter ↲ for default: pass):\e[0m"
-  read -s DB_PASS < /dev/tty
+  if ! read -t 20 -s DB_PASS < /dev/tty; then
+    DB_PASS="pass"
+  fi
   echo
   DB_PASS=${DB_PASS:-pass}
 
