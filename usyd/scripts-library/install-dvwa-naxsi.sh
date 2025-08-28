@@ -25,7 +25,26 @@
 #   # Now both curl tests will not be blocked, but attacks will still be logged.
 # ------------------------------------------------------------------------------
 
-set -e
+# Stricter Error Handling
+set -euo pipefail
+IFS=$'\n\t'
+# --- PATCH END ---
+
+# --- PATCH START: Signal-safe Cleanup ---
+cleanup() {
+  local exit_code=$?
+  echo -e "\n[INFO] Cleaning up before exit. Exit code: $exit_code"
+  # (Example: Remove any temp files, if you create any in future.)
+  # rm -f /tmp/my_temp_file || true
+  # ...add more cleanup commands if needed...
+}
+handle_interrupt() {
+  echo -e "\n[ERROR] Script interrupted by user (SIGINT)" >&2
+  exit 130
+}
+trap cleanup EXIT
+trap handle_interrupt INT
+
 
 ### ===== COLOR CONSTANTS ===== ###
 RESET="\033[0m"
