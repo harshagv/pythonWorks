@@ -309,7 +309,7 @@ EOF
 
   if systemctl list-units --type=service | grep -q "php${PHP_VER}-fpm.service"; then
     systemctl enable php${PHP_VER}-fpm --now
-    systemctl restart php${PHP_VER}-fpm
+    systemctl restart php${PHP_VER}-fpm nginx
   else
     print_error "PHP-FPM service php${PHP_VER}-fpm not found!"
     exit 1
