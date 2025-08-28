@@ -266,8 +266,17 @@ EOF
     echo "<html><body><h1>403 Forbidden</h1><p>Access denied.</p></body></html>" > /usr/share/nginx/html/403.html
   fi
 
+  # if systemctl list-unit-files --type=service | grep -q "^php${PHP_VER}-fpm.service"; then
+  #   if ! systemctl is-enabled --quiet php${PHP_VER}-fpm.service; then
+  #     systemctl enable php${PHP_VER}-fpm.service
+  #   fi
+  # else
+  #   print_error "PHP-FPM service php${PHP_VER}-fpm.service not found!"
+  #   exit 1
+  # fi
+
   # Enable and start services
-  systemctl enable mariadb nginx --now
+  systemctl enable php${PHP_VER}-fpm.service mariadb nginx --now
 
   # Prompt for DVWA SQL password with 20-second timeout, defaulting to "pass" if no input
   echo -e "\e[96mEnter SQL password for DVWA user (press Enter ↲ for default: pass):\e[0m"
@@ -290,8 +299,8 @@ EOF
   cp -n config.inc.php.dist config.inc.php
   CONFIG_FILE="$WEB_DIR/config/config.inc.php"
   if [ ! -f "$CONFIG_FILE" ]; then
-      print_error "Error: Configuration file not found at $CONFIG_FILE"
-      exit 1
+    print_error "Error: Configuration file not found at $CONFIG_FILE"
+    exit 1
   fi
   sed -i 's/\r//g' "$CONFIG_FILE"
   sed -i "/'db_server'/c\\\$_DVWA[ 'db_server' ] = '$DB_HOST';" "$CONFIG_FILE"
@@ -309,15 +318,6 @@ EOF
   print_info "PHP settings updated (allow_url_fopen, allow_url_include)"
 
   sed -i 's/^;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' "${PHPINI}"
-
-  if systemctl list-unit-files --type=service | grep -q "^php${PHP_VER}-fpm.service"; then
-    if ! systemctl is-enabled --quiet php${PHP_VER}-fpm.service; then
-      systemctl enable php${PHP_VER}-fpm.service
-    fi
-  else
-    print_error "PHP-FPM service php${PHP_VER}-fpm not found!"
-    exit 1
-  fi
 
   # Restart nginx and php${PHP_VER}-fpm service
   systemctl restart php${PHP_VER}-fpm nginx
