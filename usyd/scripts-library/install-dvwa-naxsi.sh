@@ -307,13 +307,17 @@ EOF
 
   sed -i 's/^;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' "${PHPINI}"
 
-  if systemctl list-units --type=service | grep -q "php${PHP_VER}-fpm.service"; then
-    systemctl enable php${PHP_VER}-fpm --now
-    systemctl restart php${PHP_VER}-fpm nginx
+  if systemctl list-unit-files --type=service | grep -q "^php${PHP_VER}-fpm.service"; then
+    if ! systemctl is-enabled --quiet php${PHP_VER}-fpm.service; then
+      systemctl enable php${PHP_VER}-fpm.service
+    fi
   else
     print_error "PHP-FPM service php${PHP_VER}-fpm not found!"
     exit 1
   fi
+
+  # Restart nginx and php${PHP_VER}-fpm service
+  systemctl restart php${PHP_VER}-fpm nginx
 
   print_success "DVWA + NGINX + PHP-FPM + NAXSI installed successfully"
   print_info "Access DVWA setup at: http://${SERVER_NAME}/dvwa/setup.php"
