@@ -335,7 +335,7 @@ print_signature() {
 }
 
 ### ===== MAIN LOGIC ===== ###
-case "$1" in
+case "{$1:-}" in
     "ssh")
         # Handle the 'ssh' argument
         install_ssh
