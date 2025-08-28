@@ -176,14 +176,14 @@ EOF
   if [ ! -f /usr/share/nginx/html/naxsi.html ]; then
     mkdir -p /usr/share/nginx/html
     cat > /usr/share/nginx/html/naxsi.html <<EOL
-  <html>
-  <head><title>Request Blocked</title></head>
-  <body>
+<html>
+<head><title>Request Blocked</title></head>
+<body>
   <h1>Request Blocked by NAXSI Web Application Firewall</h1>
   <p>Your request was rejected due to security policy violation.</p>
-  </body>
-  </html>
-  EOL
+</body>
+</html>
+EOL
     print_info "Created NAXSI blocked page at /usr/share/nginx/html/naxsi.html"
   fi
 
