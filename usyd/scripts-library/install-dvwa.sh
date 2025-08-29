@@ -195,7 +195,7 @@ print_signature() {
         echo -e "$final_message"
     else
         # Default fallback if the function doesn't exist
-        echo -e "\033[92mCreated with ♡, Harsha\033[0m"
+        echo -e "\n\033[92mCreated with ♡, Harsha\033[0m\n"
     fi
 }
 
