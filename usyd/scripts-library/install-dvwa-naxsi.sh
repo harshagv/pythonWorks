@@ -9,11 +9,15 @@
 #
 #   # Blocked XSS test (should be blocked by NAXSI):
 #   curl 'http://localhost/?q=><script>alert(0)</script>'
-#   <OR> Open this in browser: "http://localhost/?q=><script>alert('XSS alert! Message stored');</script>Hello, this is my stored message"
+#   <OR> 
+#   Open this in browser: "http://localhost/?q=><script>alert('XSS alert! Message stored');</script>Hello, this is my stored message"
 #
 #   # Blocked SQL Injection test (should be blocked by NAXSI):
-#   curl "http://localhost/?q=1' or '1'='1' #"
-#   <OR> Open this in browser: "http://localhost/?q=1' or '1'='1' #"
+#   curl "http://localhost/?q=1'%20or%20'1'%3D'1'%20%23"
+#   <OR>  
+#   curl "http://localhost/?q=1'%20or%20'1'%3D'1'%20%23"
+#   <OR> 
+#   Open this in browser: "http://localhost/?q=1' or '1'='1' #"
 #
 # For testing SQL injection on DVWA, use the parameter payload:
 #
@@ -75,7 +79,7 @@ print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
 install_ssh() {
   print_title "Installing OpenSSH Server"
   apt update && apt upgrade -y
-  apt install -y openssh-server ufw net-tools curl
+  apt install -y openssh-server ufw net-tools curl build-essential
 
   echo "Configuring SSH.."
   SSHD_CONFIG="/etc/ssh/sshd_config"
