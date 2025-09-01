@@ -25,6 +25,10 @@
 #   # Now both curl tests will not be blocked, but attacks will still be logged.
 # ------------------------------------------------------------------------------
 
+# Genereate the script logs
+LOGFILE="$(pwd)/dvwa-naxsi-install-$(date +"%Y%m%d-%H%M%S").log"
+exec > >(tee -a "$LOGFILE") 2>&1
+
 # Stricter Error Handling
 set -euo pipefail
 IFS=$'\n\t'
