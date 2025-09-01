@@ -79,7 +79,7 @@ print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
 install_ssh() {
   print_title "Installing OpenSSH Server"
   apt update && apt upgrade -y
-  apt install -y openssh-server ufw net-tools curl build-essential
+  apt install -y openssh-server ufw net-tools curl build-essential pkg-config
 
   echo "Configuring SSH.."
   SSHD_CONFIG="/etc/ssh/sshd_config"
