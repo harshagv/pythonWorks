@@ -301,7 +301,7 @@ EOF
   # Create 403 error page if missing
   if [ ! -f /usr/share/nginx/html/403.html ]; then
     mkdir -p /usr/share/nginx/html
-    echo "<html><body><h1>403 Forbidden</h1><p>Access denied.</p></body></html>" > /usr/share/nginx/html/403.html
+    echo "<html><body><h1>403 Forbidden</h1><p>Access denied! NAXSI running in LearningMode</p></body></html>" > /usr/share/nginx/html/403.html
   fi
 
   # if systemctl list-unit-files --type=service | grep -q "^php${PHP_VER}-fpm.service"; then
