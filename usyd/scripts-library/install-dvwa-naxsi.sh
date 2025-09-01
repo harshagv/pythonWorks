@@ -7,13 +7,19 @@
 # ------------------------------------------------------------------------------
 # TESTING NAXSI WAF: To confirm NAXSI is working and blocking attacks, run:
 #
-#   # Blocked XSS test (should Blocked by NAXSI):
-#   curl 'http://localhost/?q=><script>alert(0)</script>'
-#   <OR> Open this in browser: "http://localhost/?q=><script>alert('XSS alert! Message stored');</script> Hello, this is my stored message"
+#   # Blocked XSS test (should be blocked by NAXSI):
+#   curl 'http://localhost/?q=%3E%3Cscript%3Ealert(0)%3C/script%3E'
+#   <OR> Open this in browser: "http://localhost/?q=%3E%3Cscript%3Ealert('XSS alert! Message stored');%3C/script%3E Hello, this is my stored message"
 #
-#   # Blocked SQLi test (should Blocked by NAXSI):
-#   curl "http://localhost/?q=1%27%20or%20%221%22=%221"
-#   <OR> Open this in browser: "http://localhost/?q=1\' or \"1\"=\"1"
+#   # Blocked SQL Injection test (should be blocked by NAXSI):
+#   curl "http://localhost/?q=1' or '1'='1' #"
+#   <OR> Open this in browser: "http://localhost/?q=1' or '1'='1' #"
+#
+# For testing SQL injection on DVWA, use the parameter payload:
+#
+#   1' or '1'='1' #
+#
+# This payload works on DVWA to bypass input filters and trigger SQL injection.
 #
 #   # To see NAXSI logs and details, run this in another terminal:
 #   sudo tail -f /var/log/nginx/error.log
@@ -26,7 +32,7 @@
 # ------------------------------------------------------------------------------
 
 # Genereate the script logs
-LOGFILE="$(pwd)/dvwa-naxsi-install-$(date +"%Y%m%d-%H%M%S").log"
+LOGFILE="$(pwd)/dvwa-naxsi-installer-$(date +"%Y%m%d-%H%M%S").log"
 exec > >(tee -a "$LOGFILE") 2>&1
 
 # Stricter Error Handling
@@ -194,6 +200,30 @@ CheckRule "\$TRAVERSAL >= 4" BLOCK;
 CheckRule "\$EVADE >= 4" BLOCK;
 CheckRule "\$XSS >= 8" BLOCK;
 EOF
+
+  # Verify file was created and contains required lines
+  NAXSI_RULES_FILE="/etc/nginx/naxsi/naxsi.rules"
+
+  if [ ! -f "$NAXSI_RULES_FILE" ]; then
+    print_error "Error: $NAXSI_RULES_FILE not created!"
+    exit 1
+  fi
+
+  # Check each expected line exists in file (strict grep match)
+  if ! grep -Fxq "SecRulesEnabled;" "$NAXSI_RULES_FILE" ||
+    ! grep -Fxq "#LearningMode;" "$NAXSI_RULES_FILE" ||
+    ! grep -Fxq 'DeniedUrl "/naxsi";' "$NAXSI_RULES_FILE" ||
+    ! grep -Fxq 'CheckRule "$SQL >= 8" BLOCK;' "$NAXSI_RULES_FILE" ||
+    ! grep -Fxq 'CheckRule "$RFI >= 8" BLOCK;' "$NAXSI_RULES_FILE" ||
+    ! grep -Fxq 'CheckRule "$TRAVERSAL >= 4" BLOCK;' "$NAXSI_RULES_FILE" ||
+    ! grep -Fxq 'CheckRule "$EVADE >= 4" BLOCK;' "$NAXSI_RULES_FILE" ||
+    ! grep -Fxq 'CheckRule "$XSS >= 8" BLOCK;' "$NAXSI_RULES_FILE"; then
+    print_error "Error: $NAXSI_RULES_FILE missing required rules!"
+    exit 1
+  fi
+
+  # 3. Now print your informational message
+  print_info "Created NAXSI Rules at /etc/nginx/naxsi/naxsi.rules"
 
   # Create Naxsi blocked page if missing
   if [ ! -f /usr/share/nginx/html/naxsi.html ]; then

@@ -5,6 +5,10 @@
 #   sudo bash install-dvwa.sh ssh      # Install SSH only
 #   sudo bash install-dvwa.sh dvwa      # Install DVWA only
 
+# Genereate the script logs
+LOGFILE="$(pwd)/dvwa-installer-$(date +"%Y%m%d-%H%M%S").log"
+exec > >(tee -a "$LOGFILE") 2>&1
+
 set -e
 
 ### ===== COLOR CONSTANTS ===== ###
