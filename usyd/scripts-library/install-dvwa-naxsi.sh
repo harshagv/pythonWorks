@@ -15,7 +15,7 @@
 #   # Blocked SQL Injection test (should be blocked by NAXSI):
 #   curl "http://localhost/?q=1'%20or%20'1'%3D'1'%20%23"
 #   <OR>  
-#   curl "http://localhost/?q=1'%20or%20'1'%3D'1'%20%23"
+#   curl "http://localhost/?q=1%27%20or%20%271%27%3D%271%27%20%23"
 #   <OR> 
 #   Open this in browser: "http://localhost/?q=1' or '1'='1' #"
 #
