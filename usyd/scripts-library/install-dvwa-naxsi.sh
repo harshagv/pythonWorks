@@ -9,7 +9,7 @@
 #
 #   # Blocked XSS test (should be blocked by NAXSI):
 #   curl 'http://localhost/?q=><script>alert(0)</script>'
-#   <OR> Open this in browser: "http://localhost/?q=><script>alert('XSS alert! Message stored');</script> Hello, this is my stored message"
+#   <OR> Open this in browser: "http://localhost/?q=><script>alert('XSS alert! Message stored');</script>Hello, this is my stored message"
 #
 #   # Blocked SQL Injection test (should be blocked by NAXSI):
 #   curl "http://localhost/?q=1' or '1'='1' #"
