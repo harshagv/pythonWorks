@@ -313,93 +313,93 @@ EOF
   #   exit 1
   # fi
 
-  # Manual check for PCRE2 conflicts break PHP 8.3-FPM in Windows Host > Ubuntu VM
-  print_info "Checking for PCRE2 manual installation conflicts..."
+  # # Manual check for PCRE2 conflicts break PHP 8.3-FPM in Windows Host > Ubuntu VM
+  # print_info "Checking for PCRE2 manual installation conflicts..."
 
-  # List to check commonly installed PCRE2 libs in /usr/local/lib
-  for lib in libpcre2-8.so.0 libpcre2-posix.so.0 libpcre2-16.so.0; do
-    if [ -f "/usr/local/lib/$lib" ]; then
-      print_warn "Found manual PCRE2 library /usr/local/lib/$lib - renaming to disable"
-      sudo mv "/usr/local/lib/$lib" "/usr/local/lib/${lib}.bak"
-      conflict_found=true
-    fi
-  done
-
-  if [ "${conflict_found:-false}" = "true" ]; then
-    print_info "Updating linker cache..."
-    sudo ldconfig
-
-    print_info "Verifying PHP-FPM ${PHP_VER} status after PCRE fix..."
-
-    if sudo php-fpm${PHP_VER} -tt; then
-      print_success "PHP-FPM config test passed."
-    else
-      print_error "PHP-FPM config test failed after PCRE fix - please check manually."
-      exit 1
-    fi
-  else
-    print_info "No manual PCRE2 libraries found in /usr/local/lib, no fix needed."
-  fi
-
-  # --- PCRE2 Conflict Resolution Patch ---
-  # print_info "Checking for PCRE2 manual installation conflicts that might affect PHP-FPM ${PHP_VER}..."
-  # conflict_found=false
   # # List to check commonly installed PCRE2 libs in /usr/local/lib
-  # PCRE2_LIBS=(
-  #   "libpcre2-8.so.0"
-  #   "libpcre2-8.so.0.12.1" # Example specific version that might be manually compiled
-  #   "libpcre2-8.so"        # Generic symlink
-  #   "libpcre2-16.so.0"
-  #   "libpcre2-16.so.0.12.1"
-  #   "libpcre2-16.so"
-  #   "libpcre2-posix.so.0"
-  #   "libpcre2-posix.so.0.0.0"
-  #   "libpcre2-posix.so"
-  # )
-
-  # for lib_file in "${PCRE2_LIBS[@]}"; do
-  #   if [ -f "/usr/local/lib/$lib_file" ]; then
-  #     print_warn "Found potentially conflicting manual PCRE2 library: /usr/local/lib/$lib_file. Renaming to disable."
-  #     sudo mv "/usr/local/lib/$lib_file" "/usr/local/lib/${lib_file}.bak" || print_error "Failed to rename $lib_file."
+  # for lib in libpcre2-8.so.0 libpcre2-posix.so.0 libpcre2-16.so.0; do
+  #   if [ -f "/usr/local/lib/$lib" ]; then
+  #     print_warn "Found manual PCRE2 library /usr/local/lib/$lib - renaming to disable"
+  #     sudo mv "/usr/local/lib/$lib" "/usr/local/lib/${lib}.bak"
   #     conflict_found=true
   #   fi
   # done
 
-  # if [ "${conflict_found}" = "true" ]; then
-  #   print_info "PCRE2 conflict(s) detected and renamed. Updating linker cache..."
-  #   if sudo ldconfig; then
-  #     print_success "Linker cache updated successfully."
-  #   else
-  #     print_error "Failed to update linker cache (ldconfig). This might cause further issues. Please check manually."
-  #     # Not exiting here immediately, as it might still proceed if the main conflict was moved.
-  #   fi
+  # if [ "${conflict_found:-false}" = "true" ]; then
+  #   print_info "Updating linker cache..."
+  #   sudo ldconfig
 
-  #   print_info "Verifying PHP-FPM ${PHP_VER} configuration after PCRE fix..."
-  #   if sudo php-fpm"${PHP_VER}" -tt; then
-  #     print_success "PHP-FPM ${PHP_VER} config test passed after PCRE fix."
-  #   else
-  #     print_error "PHP-FPM ${PHP_VER} config test failed even after PCRE fix. Manual intervention is required."
-  #     print_error "Check 'systemctl status php${PHP_VER}-fpm.service' and 'journalctl -xeu php${PHP_VER}-fpm.service' for details."
-  #     exit 1 # Exit if FPM config test still fails
-  #   fi
+  #   print_info "Verifying PHP-FPM ${PHP_VER} status after PCRE fix..."
 
-  #   # Further optional verification
-  #   print_info "Checking PHP modules and linked PCRE library for php-fpm${PHP_VER}..."
-  #   if php"${PHP_VER}" -m | grep -q pcre; then
-  #       print_info "PCRE module is detected by php${PHP_VER}."
+  #   if sudo php-fpm${PHP_VER} -tt; then
+  #     print_success "PHP-FPM config test passed."
   #   else
-  #       print_warn "PCRE module not detected by php${PHP_VER} after fix. This might be an issue."
-  #   fi
-  #   if ldd /usr/sbin/php-fpm"${PHP_VER}" | grep -q "libpcre2"; then
-  #       print_info "php-fpm${PHP_VER} is dynamically linking to libpcre2. Details:"
-  #       ldd /usr/sbin/php-fpm"${PHP_VER}" | grep pcre
-  #   else
-  #       print_warn "php-fpm${PHP_VER} is NOT linking to libpcre2 after fix, or grep command failed. This might be an issue."
+  #     print_error "PHP-FPM config test failed after PCRE fix - please check manually."
+  #     exit 1
   #   fi
   # else
-  #   print_info "No conflicting manual PCRE2 libraries found in /usr/local/lib, no fix needed at this stage."
+  #   print_info "No manual PCRE2 libraries found in /usr/local/lib, no fix needed."
   # fi
-  # # --- End of PCRE2 Conflict Resolution Patch ---
+
+  # --- PCRE2 Conflict Resolution Patch ---
+  print_info "Checking for PCRE2 manual installation conflicts that might affect PHP-FPM ${PHP_VER}..."
+  conflict_found=false
+  # List to check commonly installed PCRE2 libs in /usr/local/lib
+  PCRE2_LIBS=(
+    "libpcre2-8.so.0"
+    "libpcre2-8.so.0.12.1" # Example specific version that might be manually compiled
+    "libpcre2-8.so"        # Generic symlink
+    "libpcre2-16.so.0"
+    "libpcre2-16.so.0.12.1"
+    "libpcre2-16.so"
+    "libpcre2-posix.so.0"
+    "libpcre2-posix.so.0.0.0"
+    "libpcre2-posix.so"
+  )
+
+  for lib_file in "${PCRE2_LIBS[@]}"; do
+    if [ -f "/usr/local/lib/$lib_file" ]; then
+      print_warn "Found potentially conflicting manual PCRE2 library: /usr/local/lib/$lib_file. Renaming to disable."
+      sudo mv "/usr/local/lib/$lib_file" "/usr/local/lib/${lib_file}.bak" || print_error "Failed to rename $lib_file."
+      conflict_found=true
+    fi
+  done
+
+  if [ "${conflict_found}" = "true" ]; then
+    print_info "PCRE2 conflict(s) detected and renamed. Updating linker cache..."
+    if sudo ldconfig; then
+      print_success "Linker cache updated successfully."
+    else
+      print_error "Failed to update linker cache (ldconfig). This might cause further issues. Please check manually."
+      # Not exiting here immediately, as it might still proceed if the main conflict was moved.
+    fi
+
+    print_info "Verifying PHP-FPM ${PHP_VER} configuration after PCRE fix..."
+    if sudo php-fpm"${PHP_VER}" -tt; then
+      print_success "PHP-FPM ${PHP_VER} config test passed after PCRE fix."
+    else
+      print_error "PHP-FPM ${PHP_VER} config test failed even after PCRE fix. Manual intervention is required."
+      print_error "Check 'systemctl status php${PHP_VER}-fpm.service' and 'journalctl -xeu php${PHP_VER}-fpm.service' for details."
+      exit 1 # Exit if FPM config test still fails
+    fi
+
+    # Further optional verification
+    print_info "Checking PHP modules and linked PCRE library for php-fpm${PHP_VER}..."
+    if php"${PHP_VER}" -m | grep -q pcre; then
+        print_info "PCRE module is detected by php${PHP_VER}."
+    else
+        print_warn "PCRE module not detected by php${PHP_VER} after fix. This might be an issue."
+    fi
+    if ldd /usr/sbin/php-fpm"${PHP_VER}" | grep -q "libpcre2"; then
+        print_info "php-fpm${PHP_VER} is dynamically linking to libpcre2. Details:"
+        ldd /usr/sbin/php-fpm"${PHP_VER}" | grep pcre
+    else
+        print_warn "php-fpm${PHP_VER} is NOT linking to libpcre2 after fix, or grep command failed. This might be an issue."
+    fi
+  else
+    print_info "No conflicting manual PCRE2 libraries found in /usr/local/lib, no fix needed at this stage."
+  fi
+  # --- End of PCRE2 Conflict Resolution Patch ---
 
   # Enable and start services
   systemctl enable php${PHP_VER}-fpm.service mariadb nginx --now
