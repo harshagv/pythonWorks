@@ -2,7 +2,7 @@
 # OpenVPN Server & Client Setup Script on jump host (Ubuntu)
 # Run this script as root or with sudo.
 
-### ===== COLOR CONSTANTS ===== ###
+### === COLOR CONSTANTS === ###
 RESET="\033[0m"
 GREEN="\033[1;32m"
 RED="\033[1;31m"
@@ -11,7 +11,7 @@ BLUE="\033[1;34m"
 PINK="\033[1;35m"
 CYAN="\033[1;36m"
 
-### ===== PRINT FUNCTIONS ===== ###
+### === PRINT FUNCTIONS === ###
 print_info() { echo -e "${CYAN}[INFO]${RESET} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
 print_warn() { echo -e "${YELLOW}[WARNING]${RESET} $1"; }

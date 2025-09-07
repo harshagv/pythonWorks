@@ -50,7 +50,7 @@ exec > >(tee -a "$LOGFILE") 2>&1
 set -euo pipefail
 IFS=$'\n\t'
 
-# ===== Signal-safe Cleanup =====
+# === Signal-safe Cleanup =====
 cleanup() {
   local exit_code=$?
   echo -e "\n[INFO] Cleaning up before exit. Exit code: $exit_code"
@@ -63,7 +63,7 @@ handle_interrupt() {
 trap cleanup EXIT
 trap handle_interrupt INT
 
-### ===== COLOR CONSTANTS ===== ###
+### === COLOR CONSTANTS === ###
 RESET="\033[0m"
 GREEN="\033[1;32m"
 RED="\033[1;31m"
@@ -72,7 +72,7 @@ BLUE="\033[1;34m"
 PINK="\033[1;35m"
 CYAN="\033[1;36m"
 
-### ===== PRINT FUNCTIONS ===== ###
+### === PRINT FUNCTIONS === ###
 print_info() { echo -e "${CYAN}[INFO]${RESET} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
 print_warn() { echo -e "${YELLOW}[WARNING]${RESET} $1"; }
@@ -559,7 +559,7 @@ print_signature() {
     fi
 }
 
-### ===== MAIN LOGIC ===== ###
+### === MAIN LOGIC === ###
 case "${1:-}" in
     "ssh")
         # Handle the 'ssh' argument
