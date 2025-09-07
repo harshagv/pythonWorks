@@ -26,7 +26,7 @@ CYAN="\033[1;36m"
 print_info() { echo -e "${CYAN}[INFO]${RESET} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
 print_warn() { echo -e "${YELLOW}[WARNING]${RESET} $1"; }
-print_error() { echo -e "${RED}[ERROR]${RESET} $1"; }
+print_error() { echo -e "${RED}[ERROR]${RESET}❌ $1"; }
 print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
 
 cleanup() {
@@ -326,7 +326,7 @@ downgrade_to_mysql50_dvwa() {
     " "$CONFIG_FILE"
     print_info "DVWA configuration file updated for MySQL 5.0.15."
 
-    print_success "MySQL 5.0.15 downgrade and DVWA database configuration complete!"
+    print_success "MySQL 5.0.15 downgrade and DVWA database configuration complete! ✅"
     print_info "Remember to start MySQL 5.0.15 manually if needed: '$INSTALL_DIR/bin/mysqld_safe --user=mysql &'"
     print_info "Go to DVWA's /setup.php page in your browser to configure and create the database tables."
 }

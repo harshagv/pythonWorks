@@ -5,6 +5,13 @@
 #   sudo bash install-dvwa.sh ssh      # Install SSH only
 #   sudo bash install-dvwa.sh dvwa     # Install DVWA + NGINX + PHP-FPM + NAXSI WAF only
 # ------------------------------------------------------------------------------
+# 
+#   # Create PHP config file as info.php and view it in browser
+#   echo "Helloo! <?php phpinfo(); ?>" | tee /var/www/html/info.php
+#
+#   Open this in browser: "http://localhost/info.php"
+#
+#
 # TESTING NAXSI WAF: To confirm NAXSI is working and blocking attacks, run:
 #
 #   # Blocked XSS test (should be blocked by NAXSI):
@@ -43,7 +50,7 @@ exec > >(tee -a "$LOGFILE") 2>&1
 set -euo pipefail
 IFS=$'\n\t'
 
-# --- Signal-safe Cleanup ---
+# ===== Signal-safe Cleanup =====
 cleanup() {
   local exit_code=$?
   echo -e "\n[INFO] Cleaning up before exit. Exit code: $exit_code"
@@ -69,7 +76,7 @@ CYAN="\033[1;36m"
 print_info() { echo -e "${CYAN}[INFO]${RESET} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
 print_warn() { echo -e "${YELLOW}[WARNING]${RESET} $1"; }
-print_error() { echo -e "${RED}[ERROR]${RESET} $1"; }
+print_error() { echo -e "${RED}[ERROR]${RESET}❌ $1"; }
 print_title() { echo -e "\n${PINK}=== $1 ===${RESET}\n"; }
 
 install_ssh() {
@@ -79,12 +86,12 @@ install_ssh() {
 
   echo "Configuring SSH.."
   SSHD_CONFIG="/etc/ssh/sshd_config"
-  sed -i 's/^#Port 22/Port 22/' "$SSHD_CONFIG" || true
-  sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' "$SSHD_CONFIG" || true
-  sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' "$SSHD_CONFIG" || true
+  sed -i 's/^#Port 22/Port 22/' "$SSHD_CONFIG"
+  sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' "$SSHD_CONFIG"
+  sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' "$SSHD_CONFIG"
 
-  ufw allow 22 || true
-  ufw --force enable || true
+  ufw allow 22
+  ufw --force enable
 
   echo "Restarting SSH.."
   systemctl restart ssh
@@ -92,17 +99,18 @@ install_ssh() {
   print_success "OpenSSH server installed successfully!"
 }
 
-# The install_pcre2 function is the root cause of the PCRE2 conflict.
-# It should NOT be called when using system packages for PHP-FPM.
-# I'm commenting it out entirely to prevent accidental calls.
 # install_pcre2() {
 #   print_title "Installing PCRE2 from official GitHub releases"
+
 #   PCRE2_VER="10.45"
 #   PCRE2_URL="https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${PCRE2_VER}/pcre2-${PCRE2_VER}.tar.gz"
+
 #   cd /usr/local/src
+
 #   if [ ! -d "pcre2-${PCRE2_VER}" ]; then
 #     print_info "Downloading PCRE2 ${PCRE2_VER} source..."
 #     wget -q --show-progress "${PCRE2_URL}" -O pcre2-${PCRE2_VER}.tar.gz
+
 #     tar -xzf pcre2-${PCRE2_VER}.tar.gz
 #     cd pcre2-${PCRE2_VER}
 #     ./configure
@@ -384,8 +392,109 @@ EOF
     echo "<html><body><h1>403 Forbidden</h1><p>Access denied! NAXSI running in LearningMode</p></body></html>" > /usr/share/nginx/html/403.html
   fi
 
+<<<<<<< HEAD
+  # if systemctl list-unit-files --type=service | grep -q "^php${PHP_VER}-fpm.service"; then
+  #   if ! systemctl is-enabled --quiet php${PHP_VER}-fpm.service; then
+  #     systemctl enable php${PHP_VER}-fpm.service
+  #   fi
+  # else
+  #   print_error "PHP-FPM service php${PHP_VER}-fpm.service not found!"
+  #   exit 1
+  # fi
+
+  # # Manual check for PCRE2 conflicts break PHP 8.3-FPM in Windows Host > Ubuntu VM
+  # print_info "Checking for PCRE2 manual installation conflicts..."
+
+  # # List to check commonly installed PCRE2 libs in /usr/local/lib
+  # for lib in libpcre2-8.so.0 libpcre2-posix.so.0 libpcre2-16.so.0; do
+  #   if [ -f "/usr/local/lib/$lib" ]; then
+  #     print_warn "Found manual PCRE2 library /usr/local/lib/$lib - renaming to disable"
+  #     sudo mv "/usr/local/lib/$lib" "/usr/local/lib/${lib}.bak"
+  #     conflict_found=true
+  #   fi
+  # done
+
+  # if [ "${conflict_found:-false} " = "true" ]; then
+  #   print_info "Updating linker cache..."
+  #   sudo ldconfig
+
+  #   print_info "Verifying PHP-FPM ${PHP_VER} status after PCRE fix..."
+
+  #   if sudo php-fpm${PHP_VER} -tt; then
+  #     print_success "PHP-FPM config test passed."
+  #   else
+  #     print_error "PHP-FPM config test failed after PCRE fix - please check manually."
+  #     exit 1
+  #   fi
+  # else
+  #   print_info "No manual PCRE2 libraries found in /usr/local/lib, no fix needed."
+  # fi
+
+  # --- PCRE2 Conflict Resolution Patch ---
+  print_info "Checking for PCRE2 manual installation conflicts that might affect PHP-FPM ${PHP_VER}..."
+  conflict_found=false
+  # List to check commonly installed PCRE2 libs in /usr/local/lib
+  PCRE2_LIBS=(
+    "libpcre2-8.so.0"
+    "libpcre2-8.so.0.12.1" # Example specific version that might be manually compiled
+    "libpcre2-8.so"        # Generic symlink
+    "libpcre2-16.so.0"
+    "libpcre2-16.so.0.12.1"
+    "libpcre2-16.so"
+    "libpcre2-posix.so.0"
+    "libpcre2-posix.so.0.0.0"
+    "libpcre2-posix.so"
+  )
+
+  for lib_file in "${PCRE2_LIBS[@]}"; do
+    if [ -f "/usr/local/lib/$lib_file" ]; then
+      print_warn "Found potentially conflicting manual PCRE2 library: /usr/local/lib/$lib_file. Renaming to disable."
+      sudo mv "/usr/local/lib/$lib_file" "/usr/local/lib/${lib_file}.bak" || print_error "Failed to rename $lib_file."
+      conflict_found=true
+    fi
+  done
+
+  if [ "${conflict_found}" = "true" ]; then
+    print_info "PCRE2 conflict(s) detected and renamed. Updating linker cache..."
+    if sudo ldconfig; then
+      print_success "Linker cache updated successfully."
+    else
+      print_error "Failed to update linker cache (ldconfig). This might cause further issues. Please check manually."
+      # Not exiting here immediately, as it might still proceed if the main conflict was moved.
+    fi
+
+    print_info "Verifying PHP-FPM ${PHP_VER} configuration after PCRE fix..."
+    if sudo php-fpm"${PHP_VER}" -tt; then
+      print_success "PHP-FPM ${PHP_VER} config test passed after PCRE fix."
+    else
+      print_error "PHP-FPM ${PHP_VER} config test failed even after PCRE fix. Manual intervention is required."
+      print_error "Check 'systemctl status php${PHP_VER}-fpm.service' and 'journalctl -xeu php${PHP_VER}-fpm.service' for details."
+      exit 1 # Exit if FPM config test still fails
+    fi
+
+    # Further optional verification
+    print_info "Checking PHP modules and linked PCRE library for php-fpm${PHP_VER}..."
+    if php"${PHP_VER}" -m | grep -q pcre; then
+        print_info "PCRE module is detected by php${PHP_VER}."
+    else
+        print_warn "PCRE module not detected by php${PHP_VER} after fix. This might be an issue."
+    fi
+    if ldd /usr/sbin/php-fpm"${PHP_VER}" | grep -q "libpcre2"; then
+        print_info "php-fpm${PHP_VER} is dynamically linking to libpcre2. Details:"
+        ldd /usr/sbin/php-fpm"${PHP_VER}" | grep pcre
+    else
+        print_warn "php-fpm${PHP_VER} is NOT linking to libpcre2 after fix, or grep command failed. This might be an issue."
+    fi
+  else
+    print_info "No conflicting manual PCRE2 libraries found in /usr/local/lib, no fix needed at this stage."
+  fi
+  # --- End of PCRE2 Conflict Resolution Patch ---
+
+  # Enable and start services
+=======
   # Enable and start services (moved here after all configurations are in place)
   print_info "Enabling and starting php-fpm, mariadb, and nginx services..."
+>>>>>>> 7a1d6e6890a5fb80b7c5023300d3120fff25a1b4
   systemctl enable php${PHP_VER}-fpm.service mariadb nginx --now
 
   # Prompt for DVWA SQL password with 15-second timeout, defaulting to "pass" if no input
@@ -431,7 +540,7 @@ EOF
   print_info "Performing final restart of PHP-FPM and NGINX services..."
   systemctl restart php${PHP_VER}-fpm nginx
 
-  print_success "DVWA + NGINX + PHP-FPM + NAXSI installed successfully"
+  print_success "DVWA + NGINX + PHP-FPM + NAXSI installed successfully ✅"
   print_info "Access DVWA setup at: http://${SERVER_NAME}/dvwa/setup.php"
   print_info "Default credentials: admin / password"
 }
@@ -460,7 +569,8 @@ case "${1:-}" in
         ;;
     "dvwa")
         # Handle the 'dvwa' argument
-        # REMOVED: install_pcre2 is the root cause of the conflict.
+        # REMOVED: install_pcre2 is the root cause of the PHP-FPM PCRE2 conflict and NGINX build error.
+        # install_pcre2
         install_dvwa_naxsi
         print_info "[✔] DVWA + NAXSI installation complete."
         print_signature # Call the signature function
@@ -468,7 +578,8 @@ case "${1:-}" in
     "")
         # Handle the empty argument (no argument provided)
         install_ssh
-        # REMOVED: install_pcre2 is the root cause of the conflict.
+        # REMOVED: install_pcre2 is the root cause of the PHP-FPM PCRE2 conflict and NGINX build error.
+        # install_pcre2
         install_dvwa_naxsi
         print_info "[✔] Full SSH + DVWA installation complete."
         print_signature # Call the signature function
