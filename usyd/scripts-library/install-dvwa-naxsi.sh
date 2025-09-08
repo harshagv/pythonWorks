@@ -392,7 +392,6 @@ EOF
     echo "<html><body><h1>403 Forbidden</h1><p>Access denied! NAXSI running in LearningMode</p></body></html>" > /usr/share/nginx/html/403.html
   fi
 
-<<<<<<< HEAD
   # if systemctl list-unit-files --type=service | grep -q "^php${PHP_VER}-fpm.service"; then
   #   if ! systemctl is-enabled --quiet php${PHP_VER}-fpm.service; then
   #     systemctl enable php${PHP_VER}-fpm.service
@@ -491,10 +490,6 @@ EOF
   # --- End of PCRE2 Conflict Resolution Patch ---
 
   # Enable and start services
-=======
-  # Enable and start services (moved here after all configurations are in place)
-  print_info "Enabling and starting php-fpm, mariadb, and nginx services..."
->>>>>>> 7a1d6e6890a5fb80b7c5023300d3120fff25a1b4
   systemctl enable php${PHP_VER}-fpm.service mariadb nginx --now
 
   # Prompt for DVWA SQL password with 15-second timeout, defaulting to "pass" if no input
