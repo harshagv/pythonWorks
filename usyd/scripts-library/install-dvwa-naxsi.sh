@@ -20,9 +20,11 @@
 #   Open this in browser: "http://localhost/?q=><script>alert('XSS alert! Message stored');</script>Hello, this is my stored message"
 #
 #   # Blocked SQL Injection test (should be blocked by NAXSI):
-#   curl "http://localhost/?q=1'%20or%20'1'%3D'1'%20%23"
+#   curl "http://localhost/?id=1'%20or%20'1'%3D'1'%20%23"
 #   <OR>
-#   curl "http://localhost/?q=1%27%20or%20%271%27%3D%271%27%20%23"
+#   curl "http://localhost/?id=1%27%20or%20%271%27%3D%271%27%20%23"
+#   <OR>
+#   curl "http://localhost/?id=1%27+or+%271%27%3D%271%27+--+&Submit=Submit#"
 #   <OR>
 #   Open this in browser: "http://localhost/?q=1' or '1'='1' #"
 #
@@ -30,6 +32,8 @@
 #
 #   1' or '1'='1' #
 #   2' AND '1'='1' #
+#   1' or '1'='1' -- 
+#   1'%20or%20'1'='1'%20--%20
 #   1' UNION SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.tables; --
 #
 # This payload works on DVWA to bypass input filters and trigger SQL injection.
