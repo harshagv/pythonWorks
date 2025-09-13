@@ -98,6 +98,7 @@ install_ssh() {
   sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' "$SSHD_CONFIG"
 
   ufw allow 22
+  ufw allow 80
   ufw --force enable
 
   echo "Restarting SSH.."
