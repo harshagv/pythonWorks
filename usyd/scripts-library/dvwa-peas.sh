@@ -163,13 +163,30 @@ ubuntu_run_peas_scan() {
     chmod +x "$PEAS_SCRIPT_PATH"
 
     print_info "Running linPEAS scan as root. This may take a few minutes..."
-    print_warn "Full color-coded output will be saved to ${PEAS_REPORT_PATH}."
+    print_warn "Live output is shown below. A full color-coded copy will be saved to ${PEAS_REPORT_PATH}."
+    echo "" # Add a newline for better readability before the verbose output starts
     
-    # Run the script and save its output
-    bash "$PEAS_SCRIPT_PATH" > "$PEAS_REPORT_PATH"
-    
+    # --- CORRECTED EXECUTION BLOCK ---
+    # Temporarily disable 'exit on error'
+    set +e
+    # Execute linpeas, redirecting stderr to stdout, then pipe the combined stream to tee.
+    # tee will display the output on the terminal AND save it to the report file.
+    bash "$PEAS_SCRIPT_PATH" 2>&1 | tee "$PEAS_REPORT_PATH"
+    # Capture the exit code of the FIRST command in the pipe (linpeas.sh), not tee.
+    local PEAS_EXIT_CODE=${PIPESTATUS[0]}
+    set -e # Re-enable 'exit on error'
+    # --- END OF CORRECTION ---
+    echo ""
+
     print_success "linPEAS scan complete."
-    print_info "To review the report, run the following command on your Ubuntu VM:"
+
+    # Check the exit code and inform the user
+    if [ "$PEAS_EXIT_CODE" -ne 0 ]; then
+        print_warn "linpeas.sh finished with a non-zero exit code ($PEAS_EXIT_CODE). This is often normal and does not mean the scan failed."
+    fi
+    
+    # These instructions will now be displayed correctly after the live output.
+    print_info "To review the full, color-coded report, run the following command on your Ubuntu VM:"
     echo -e "${GREEN}less -R ${PEAS_REPORT_PATH}${RESET}"
     print_info "Inside 'less', you can search for keywords like 'WARNING' or 'privilege' by typing '/' followed by the word and pressing Enter."
 }
