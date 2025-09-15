@@ -7,7 +7,7 @@
 # --- For Ubuntu DVWA VM (The Target) ---
 #
 # Set up the SUID binary and reverse shell script:
-#   wget https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh && sudo bash dvwa-peas.sh suid_setup
+#   wget -O dvwa-peas.sh https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh && sudo bash dvwa-peas.sh suid_setup
 #
 # Download and run the linPEAS privilege escalation scanner:
 #   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s peas_scan
