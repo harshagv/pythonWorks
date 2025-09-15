@@ -68,7 +68,7 @@ ubuntu_setup_suid_escalation() {
     # --- Step 1: Get Attacker IP for the Reverse Shell ---
     local KALI_HOST_IP
     echo -ne "${CYAN}Enter your Kali VM's IP address (e.g., 192.168.56.1 for the reverse shell to connect to, 15s timeout): ${RESET}"
-    if ! read -t 15 KALI_HOST_IP < /dev/tty || [ -z "$KALI_HOST_IP" ]; then
+    if ! read -t 15 -p KALI_HOST_IP || [ -z "$KALI_HOST_IP" ]; then
         print_error "Kali IP address cannot be empty. Aborting."
         exit 1
     fi
