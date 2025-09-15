@@ -1,21 +1,13 @@
 #!/bin/bash
 # Script Name: dvwa-peas.sh
 # Description: Automates privilege escalation setup on a DVWA Ubuntu VM and guides the user through the exploit.
-
-os-shell> whoamido you want to retrieve the command standard output? [Y/n/a] Y
-
-command standard output: 'www-data'
-os-shell> /tmp/escalate
-do you want to retrieve the command standard output? [Y/n/a] Y
-command standard output: 'sh: 1: /tmp/escalate: not found'
-
 #
 # === Usage Instructions ===
 #
 # --- For Ubuntu DVWA VM (The Target) ---
 #
 # Set up the SUID binary and reverse shell script:
-#   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s suid_setup
+#   wget https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh && sudo bash dvwa-peas.sh suid_setup
 #
 # Download and run the linPEAS privilege escalation scanner:
 #   wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s peas_scan
@@ -67,6 +59,9 @@ trap handle_interrupt INT
 ubuntu_setup_suid_escalation() {
     print_title "Setting Up PERSISTENT SUID Privilege Escalation Binaries"
 
+    # Allow Privilege Escalation to port by UFW
+    sudo ufw allow 1234/tcp
+    
     # --- Step 1: Define a Persistent, Secure Path ---
     local EXPLOIT_DIR="/opt/escalation_tools"
     print_info "Using persistent directory for exploit files: ${EXPLOIT_DIR}"
