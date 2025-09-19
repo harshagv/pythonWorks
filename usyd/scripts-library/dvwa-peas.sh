@@ -1,6 +1,11 @@
 #!/bin/bash
+# =================================================
 # Script Name: dvwa-peas.sh
+# Author: Harsha GV
+# Date: 2025-09-15
 # Description: Automates privilege escalation setup on a DVWA Ubuntu VM and guides the user through the exploit.
+# Version: 1.0
+# =================================================
 #
 # === Usage Instructions ===
 #

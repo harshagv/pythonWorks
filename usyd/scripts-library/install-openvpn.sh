@@ -1,5 +1,12 @@
 #!/bin/bash
-# OpenVPN Server & Client Setup Script on jump host (Ubuntu)
+# =================================================
+# Script Name: install-openvpn.sh
+# Author: Harsha GV
+# Date: 2025-08-01
+# Description: OpenVPN Server & Client Setup Script on jump host (Ubuntu)
+# Version: 1.0
+# =================================================
+#
 # Run this script as root or with sudo.
 
 ### === COLOR CONSTANTS === ###

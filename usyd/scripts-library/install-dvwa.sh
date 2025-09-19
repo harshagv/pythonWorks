@@ -1,8 +1,17 @@
 #!/bin/bash
-# DVWA & SSH Auto Install Script for Ubuntu
+# =================================================
+# Script Name: install-dvwa.sh
+# Author: Harsha GV
+# Date: 2025-08-01
+# Description: DVWA with Nginx & SSH Auto Install Script for Ubuntu
+# Version: 1.0
+# =================================================
+#
+# === Usage Instructions ===
+# 
 # Usage:
-#   sudo bash install-dvwa.sh          # Install SSH + DVWA (with MariaDB)
-#   sudo bash install-dvwa.sh ssh      # Install SSH only
+#   sudo bash install-dvwa.sh           # Install SSH + DVWA (with MariaDB)
+#   sudo bash install-dvwa.sh ssh       # Install SSH only
 #   sudo bash install-dvwa.sh dvwa      # Install DVWA only (with MariaDB)
 #   sudo bash install-dvwa.sh mysql50   # (NEW) Downgrade to MySQL 5.0.15 for DVWA
 

@@ -1,9 +1,18 @@
 #!/bin/bash
-# DVWA & SSH Auto Install Script for Ubuntu using NGINX + PHP-FPM + NAXSI WAF
+# =================================================
+# Script Name: install-dvwa-naxsi.sh
+# Author: Harsha GV
+# Date: 2025-08-24
+# Description: DVWA & SSH Auto Install Script for Ubuntu using NGINX + PHP-FPM + NAXSI WAF
+# Version: 1.0
+# =================================================
+#
+# === Usage Instructions ===
+# 
 # Usage:
-#   sudo bash install-dvwa.sh          # Install SSH + DVWA + NGINX + PHP-FPM + NAXSI WAF
-#   sudo bash install-dvwa.sh ssh      # Install SSH only
-#   sudo bash install-dvwa.sh dvwa     # Install DVWA + NGINX + PHP-FPM + NAXSI WAF only
+#   sudo bash install-dvwa-naxsi.sh          # Install SSH + DVWA + NGINX + PHP-FPM + NAXSI WAF
+#   sudo bash install-dvwa-naxsi.sh ssh      # Install SSH only
+#   sudo bash install-dvwa-naxsi.sh dvwa     # Install DVWA + NGINX + PHP-FPM + NAXSI WAF only
 # ------------------------------------------------------------------------------
 # 
 #   # Create PHP config file as info.php and view it in browser
