@@ -55,6 +55,7 @@ sudo -l
 find / -perm /4000 -type f 2>/dev/null
 find / -xdev -type f -perm -o+w 2>/dev/null
 grep -Ri "password" /var/www 2>/dev/null
+grep -Ri "password" /srv/flask/vulpy/bad 2>/dev/null
 cat /etc/passwd
 exit
 EOF
