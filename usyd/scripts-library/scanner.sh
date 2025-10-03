@@ -268,8 +268,7 @@ sudo -u _gvm greenbone-feed-sync --type cert
 sudo -u _gvm greenbone-feed-sync --type notus
 sudo -u _gvm gvmd --rebuild-gvmd-data=all
 sudo gvm-stop
-var/lib/gvm/
-sudo /usr/local/bin/greenbone-feed-sync
+
 # # Synchronize NVT (Network Vulnerability Tests)
 # rsync -avz rsync://feed.community.greenbone.net:/nvt-feed /var/lib/gvm/data-objects/nvt-feed
 # # Synchronize SCAP data
