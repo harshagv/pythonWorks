@@ -61,7 +61,7 @@ EOF
 
 
 # try common creds using hydra for a login form (example form params)
-hydra -l admin -P /usr/share/wordlists/rockyou.txt http-post-form "/login:username=^USER^&password=^PASS^:F=wrong" <target-ip> -V
+hydra -l admin -P /usr/share/wordlists/rockyou.txt http-post-form "/login:username=^USER^&password=^PASS^:F=wrong" ${VULNBOX_IP} -V
 
 
 hydra -L /usr/share/wordlists/usernames.txt -P /usr/share/wordlists/rockyou.txt http://${VULNBOX_IP}:5000/user http-form-post "/login:username=^USER^&password=^PASS^:Incorrect" -t 4 -f -o "$OUT/hydra_login.txt"
@@ -89,6 +89,9 @@ grep -nEi "form|input|href|action|csrf|token|session|id=|/posts/" "$OUT/posts_50
 nikto -host http://${VULNBOX_IP} -output nikto_80.txt
 nikto -host http://${VULNBOX_IP}:5000 -output nikto_5000.txt
 # Or run Burp/ZAP proxy manual testing for auth/session issues, CSRF, XSS, etc.
+
+
+wapiti -u http://${VULNBOX_IP}:5000 -f html -o wapiti_report.txt
 
 
 # check for obvious stacktrace / Werkzeug in page
