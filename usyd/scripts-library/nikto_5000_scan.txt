@@ -1,0 +1,20 @@
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          192.168.56.101
++ Target Hostname:    192.168.56.101
++ Target Port:        5000
++ Start Time:         2025-10-03 18:49:51 (GMT10)
+---------------------------------------------------------------------------
++ Server: Werkzeug/0.14.1 Python/3.7.3
++ /: The anti-clickjacking X-Frame-Options header is not present. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
++ /: The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/
++ Root page / redirects to: http://192.168.56.101/posts
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ /: The web server may reveal its internal or real IP in the Location header via a request to with HTTP/1.0. The value is "0.0.0.0". See: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2000-0649
++ Python/3.7.3 appears to be outdated (current is at least 3.9.6).
++ OPTIONS: Allowed HTTP Methods: OPTIONS, HEAD, GET .
++ /console: This might be interesting.
++ 8121 requests: 0 error(s) and 6 item(s) reported on remote host
++ End Time:           2025-10-03 18:50:22 (GMT10) (31 seconds)
+---------------------------------------------------------------------------
++ 1 host(s) tested
