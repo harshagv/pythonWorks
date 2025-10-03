@@ -141,7 +141,7 @@ wpscan --url http://${VULNBOX_IP}:5000 --enumerate u
 wpscan --username admin --url http://${VULNBOX_IP}:5000 --wordlist /usr/share/wordlists/metasploit/http_default_pass.txt --wp-content-dir http://${VULNBOX_IP}:5000/ --threads 20
 
 
-
+# grep "\[!\]" linpeas_sh_scan_results.log | awk -F'[][]' '{print $2 "\t" $3}' | column -t -s $'\t' 
 
 #tar -czf "vulpy_scan_${IP}_$(date +%F_%T).tgz" ./*
 #ls -lh
