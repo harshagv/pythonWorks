@@ -378,14 +378,27 @@ export PATH=$PATH:$GOPATH/bin
 cd $GOPATH/src/github.com/future-architect
 git clone https://github.com/future-architect/vuls.git
 cd vuls
+go mod tidy
+export TMPDIR=/var/tmp
 make install
 sudo mkdir -p /usr/share/vuls-data /var/log/vuls
 sudo chmod 700 /var/log/vuls
+
+mkdir -p $GOPATH/src/github.com/vulsio
+cd $GOPATH/src/github.com/vulsio
+git clone https://github.com/vulsio/go-cve-dictionary.git
+cd go-cve-dictionary
+sudo cp $GOPATH/bin/go-cve-dictionary /usr/local/bin/
 go-cve-dictionary fetch -dbpath=/usr/share/vuls-data/cve.sqlite3
-goval-dictionary fetch-ubuntu -dbpath=/usr/share/vuls-data/oval.sqlite3 20
+
+mkdir -p $GOPATH/src/github.com/vulsio
+cd $GOPATH/src/github.com/vulsio
+git clone https://github.com/vulsio/goval-dictionary.git
+cd goval-dictionary
+make install
+goval-dictionary fetch ubuntu 20.04 --dbpath=/usr/share/vuls-data/oval.sqlite3
+
+
 gost fetch debian
 vuls scan
 vuls report
-
-
-
