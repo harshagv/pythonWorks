@@ -226,3 +226,43 @@ wpscan --username admin --url http://${VULNBOX_IP}:5000 --wordlist /usr/share/wo
 #tar -czf "vulpy_scan_${IP}_$(date +%F_%T).tgz" ./*
 #ls -lh
 
+
+
+# openvas
+
+#!/bin/bash
+# OpenVAS (GVM) install and setup script for Kali Linux with permission fixes
+
+echo "[*] Updating Kali Linux packages..."
+sudo apt update && sudo apt upgrade -y && sudo apt dist-upgrade -y
+
+echo "[*] Installing OpenVAS package..."
+sudo apt install openvas -y
+sudo systemctl enable ospd-openvas.service --now
+
+echo "[*] Running OpenVAS setup (this will download vulnerability feeds, may take some time)..."
+sudo gvm-setup
+
+echo "[*] Fixing permissions to avoid ospd-openvas service errors..."
+
+# Fix permissions for OpenVAS log file
+sudo chmod 666 /var/log/gvm/openvas.log
+
+# Fix ownership for GVM user directories
+sudo chown -R _gvm:_gvm /etc/openvas/gnupg
+sudo chown -R _gvm:_gvm /var/log/gvm
+sudo chown -R _gvm:_gvm /var/lib/gvm
+sudo -u _gvm greenbone-feed-sync --type GVMD_DATA
+
+# Optional: Fix Redis config if needed (uncomment to apply)
+# sudo sed -i 's/^save ""/# save ""/' /etc/redis/redis-openvas.conf
+# sudo systemctl restart redis-server
+
+echo "[*] Starting OpenVAS services..."
+sudo gvm-start
+
+echo "[*] Verifying OpenVAS setup..."
+sudo gvm-check-setup
+
+echo "[*] Setup complete. Access OpenVAS web UI at https://localhost:9392"
+echo "[*] Log in with the admin credentials provided at the end of setup."
