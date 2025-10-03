@@ -336,3 +336,56 @@ print(new_encoded)
 # vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9
 # base64 decoded: {"username": "admin"}
 
+
+
+nano /etc/gvm/greenbone-feed-sync.toml
+---
+...
+feed-url="rsync://45.135.106.143/community"
+...
+
+sudo tee /etc/rsyncd.conf > /dev/null <<EOF
+uid = nobody
+gid = nogroup
+use chroot = yes
+max connections = 4
+pid file = /var/run/rsyncd.pid
+lock file = /var/run/rsyncd.lock
+log file = /var/log/rsyncd.log
+
+[backup]
+path = /path/to/backup
+comment = Backup Folder
+read only = no
+EOF
+
+
+sudo systemctl enable rsync --now
+sudo systemctl start rsync
+sudo systemctl status rsync
+
+
+# vulns
+sudo apt install git gcc make wget sqlite3 debian-goodies -y
+#wget https://go.dev/dl/go1.24.7.linux-amd64.tar.gz
+wget https://dl.google.com/go/go1.20.5.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+mkdir -p $HOME/go/src/github.com/future-architect
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+
+cd $GOPATH/src/github.com/future-architect
+git clone https://github.com/future-architect/vuls.git
+cd vuls
+make install
+sudo mkdir -p /usr/share/vuls-data /var/log/vuls
+sudo chmod 700 /var/log/vuls
+go-cve-dictionary fetch -dbpath=/usr/share/vuls-data/cve.sqlite3
+goval-dictionary fetch-ubuntu -dbpath=/usr/share/vuls-data/oval.sqlite3 20
+gost fetch debian
+vuls scan
+vuls report
+
+
+
