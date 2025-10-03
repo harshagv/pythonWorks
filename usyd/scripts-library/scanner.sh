@@ -232,6 +232,9 @@ wpscan --username admin --url http://${VULNBOX_IP}:5000 --wordlist /usr/share/wo
 
 #!/bin/bash
 # OpenVAS (GVM) install and setup script for Kali Linux with permission fixes
+# Guide: https://greenbone.github.io/docs/latest/22.4/kali/index.html
+# Guide #2: https://std.rocks/security_kali_gvm.html
+
 
 echo "[*] Updating Kali Linux packages..."
 sudo apt update && sudo apt upgrade -y && sudo apt dist-upgrade -y
@@ -267,24 +270,17 @@ sudo -u _gvm gvmd --rebuild-gvmd-data=all
 sudo gvm-stop
 var/lib/gvm/
 sudo /usr/local/bin/greenbone-feed-sync
-# Synchronize NVT (Network Vulnerability Tests)
-rsync -avz rsync://feed.community.greenbone.net:/nvt-feed /var/lib/gvm/data-objects/nvt-feed
-# Synchronize SCAP data
-rsync -avz rsync://feed.community.greenbone.net:/scap-data /var/lib/gvm/data-objects/scap-data
-# Synchronize CERT data
-rsync -avz rsync://feed.community.greenbone.net:/cert-data /var/lib/gvm/data-objects/cert-data
-# Synchronize GVMD data (users, scan configs, port lists)
-rsync -avz rsync://feed.community.greenbone.net:/gvmd-data /var/lib/gvm/data-objects/gvmd
-# Synchronize NOTUS data
-rsync -avz rsync://feed.community.greenbone.net:/notus /var/lib/gvm/data-objects/notus
+# # Synchronize NVT (Network Vulnerability Tests)
+# rsync -avz rsync://feed.community.greenbone.net:/nvt-feed /var/lib/gvm/data-objects/nvt-feed
+# # Synchronize SCAP data
+# rsync -avz rsync://feed.community.greenbone.net:/scap-data /var/lib/gvm/data-objects/scap-data
+# # Synchronize CERT data
+# rsync -avz rsync://feed.community.greenbone.net:/cert-data /var/lib/gvm/data-objects/cert-data
+# # Synchronize GVMD data (users, scan configs, port lists)
+# rsync -avz rsync://feed.community.greenbone.net:/gvmd-data /var/lib/gvm/data-objects/gvmd
+# # Synchronize NOTUS data
+# rsync -avz rsync://feed.community.greenbone.net:/notus /var/lib/gvm/data-objects/notus
 
-
-
-sudo cp -r ~/openvas_feeds/nvt-feed/* /var/lib/gvm/feed/nvt/
-sudo cp -r ~/openvas_feeds/scap-data/* /var/lib/gvm/feed/scap/
-sudo cp -r ~/openvas_feeds/cert-data/* /var/lib/gvm/feed/cert/
-sudo cp -r ~/openvas_feeds/gvmd-data/* /var/lib/gvm/feed/gvmd/
-sudo cp -r ~/openvas_feeds/notus/* /var/lib/gvm/feed/notus/
 
 
 # Optional: Fix Redis config if needed (uncomment to apply)
@@ -300,6 +296,10 @@ sudo gvm-check-setup
 echo "[*] Setup complete. Access OpenVAS web UI at https://localhost:9392"
 echo "[*] Log in with the admin credentials provided at the end of setup."
 
+
+# sudo runuser -u _gvm -- gvmd --create-user=admin --password='<your-password>'
+# [*] Please note the generated admin password
+# [*] User created with password '2d42f8db-8d2f-4105-a465-b178d56503da'.
 
 
 ## Insecure Deserialization
