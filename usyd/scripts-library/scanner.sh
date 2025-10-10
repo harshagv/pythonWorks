@@ -410,3 +410,47 @@ gost fetch debian
 vuls scan
 vuls report
 
+
+
+
+# Week #9
+#!/bin/bash
+
+# Update and upgrade system
+sudo apt update && sudo apt upgrade -y
+
+# Install OpenJDK 21
+sudo a
+pt install openjdk-21-jdk adb -y
+
+# Download Android Studio
+wget -O android-studio.tar.gz "https://r3---sn-npoldne7.gvt1.com/edgedl/android/studio/ide-zips/2025.1.4.8/android-studio-2025.1.4.8-linux.tar.gz?met=1760071783"
+
+# Extract Android Studio
+tar -xzvf android-studio.tar.gz
+
+# Run Android Studio in background with nohup
+cd android-studio/bin
+nohup ./studio.sh > android-studio.log 2>&1 &
+# Move back to home or previous directory
+cd -
+
+# Install Python and dependencies for mitmproxy
+sudo apt install python3 python3-pip python3-dev libffi-dev libssl-dev -y
+
+
+# Use virtualenv
+python3 -m venv venv
+
+# Install mitmproxy
+source venv/bin/activate
+pip3 install mitmproxy
+
+# Run mitmdump (non-interactive mitmproxy) in background with nohup
+nohup mitmdump > mitmdump.log 2>&1 &
+
+# Verify mitmproxy installation
+mitmproxy --version
+
+
+https://www.perplexity.ai/search/commands-to-install-android-st-Bplx15TVQ1G7HqwRGqDt2A
