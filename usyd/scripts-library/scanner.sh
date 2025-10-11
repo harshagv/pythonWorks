@@ -454,3 +454,109 @@ mitmproxy --version
 
 
 https://www.perplexity.ai/search/commands-to-install-android-st-Bplx15TVQ1G7HqwRGqDt2A
+
+
+
+python3 -m venv venv
+source venv/bin/activate
+pip install frida
+pip install frida-tools # CLI tools
+pip install --upgrade frida==17.3.2
+
+#pip3 install frida --upgrade
+#pip3 install frida-tools --upgrade
+
+# adb -s emulator-5554 shell rm -rf "/data/local/tmp/frida-*"
+
+# Extract the .tar.xz on your computer
+adb -s emulator-5554 shell getprop ro.product.cpu.abilist
+
+curl -LO https://github.com/frida/frida/releases/download/17.3.2/frida-server-17.3.2-android-arm64.xz
+unxz frida-server-17.3.2-android-arm64.xz
+mv frida-server-17.3.2-android-arm64 frida-server
+chmod +x frida-server
+adb -s emulator-5554 push frida-server /data/local/tmp/
+adb -s emulator-5554 shell ls /data/local/tmp/
+adb -s emulator-5554 shell "chmod 755 /data/local/tmp/frida-server"
+
+adb -s emulator-5554 shell "netstat -tuln | grep 27042"
+adb -s emulator-5554 shell "ps | grep frida-server"
+adb -s emulator-5554 shell "kill -9 <PID>"
+adb -s emulator-5554 reboot
+
+
+adb -s emulator-5554 root
+adb -s emulator-5554 shell "/data/local/tmp/frida-server &"
+
+
+adb -s emulator-5554 shell "/data/local/tmp/frida-server --version"
+frida --version
+
+
+frida-ps -Uai
+frida-trace -U -f com.android.chrome -i open
+# frida-trace -U -n com.android.chrome -i open
+
+
+adb -s emulator-5554 install task4.apk
+
+
+adb -s emulator-5554 logcat
+adb  -s emulator-5554 logcat -v time | grep --line-buffered "Sum"
+
+
+
+
+# com.example.a11x256.frida_test
+
+frida-trace -U -f com.example.a11x256.frida_test -i open
+
+# modify_sum.js
+Java.perform(function () {
+    var MyActivity = Java.use('com.example.a11x256.frida_test.my_activity');
+
+    MyActivity.fun.implementation = function (x, y) {
+        console.log('[*] Original args: ' + x + ', ' + y);
+
+        // Modify arguments
+        var newX = 2;
+        var newY = 5;
+        console.log('[*] Modified args: ' + newX + ', ' + newY);
+
+        return this.fun(newX, newY);
+    };
+});
+
+
+PACKAGE="com.example.a11x256.frida_test"
+adb -s emulator-5554 shell pm list packages | grep "$PACKAGE" || adb shell pm path "$PACKAGE"
+package:com.example.a11x256.frida_test
+adb -s emulator-5554 shell "ps" | grep frida_test
+adb -s emulator-5554 shell ps -A | grep com.example.a11x256
+adb -s emulator-5554 shell ps -o USER,PID,NAME | grep <pid>
+PID=$(adb -s emulator-5554 shell pidof $PACKAGE | tr -d '\r')
+
+
+# frida -U -n com.example.a11x256.frida_test -l modify_sum.js
+frida -U -p <PID> -l modify_sum.js
+
+# spawn and inject
+frida -U -f com.example.a11x256.frida_test -l modify_sum.js
+
+# attach to running process
+frida -U -n com.example.a11x256.frida_test -l modify_sum.js
+
+
+
+PACKAGE="com.example.a11x256.frida_test"
+frida -U -f com.example.a11x256.frida_test -l hook_fun_change_args.js --no-pause
+
+frida -U -p 6691 -l hook_fun_change_args.js
+
+frida -U --runtime=v8 -p 6691 -l hook_fun_change_args.js
+
+
+
+PACKAGE="com.example.a11x256.frida_test"
+frida -U -f "$PACKAGE" -l hook_fun_change_args.js
+
