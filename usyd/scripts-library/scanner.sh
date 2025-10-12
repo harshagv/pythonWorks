@@ -20,6 +20,35 @@ nmap -sS -sV -p- -A --script=banner,ftp-anon,http-enum,http-title,ssh-hostkey,up
 
 # nmap -sS -sV -p- -A --script=banner,ftp-anon,http-enum,ssh-hostkey,upnp-info,vuln ${VULNBOX_IP} -oN nmap_full.txt
 
+
+# LLM-Nmap
+
+# 1. Install pre-reqs
+sudo apt-get update
+sudo apt-get install -y nmap python3 python3-pip git
+
+# 2. Install llm CLI
+pip install --user llm    # or pipx install llm, or brew install llm
+
+# 3. Clone plugin
+git clone https://github.com/peter-hackertarget/llm-tools-nmap.git
+cd llm-tools-nmap
+
+# 4a. (remote model) export API KEY and set default model if needed
+export OPENAI_API_KEY="sk_xxx"   # or whichever provider
+llm models default gpt-4o
+
+# 4b. (optional local model)
+llm install llm-smollm2
+llm models default SmolLM2
+
+# 5. Run the plugin to scan your VM
+llm --functions llm-tools-nmap.py "Scan 192.168.56.101 for open databases"
+
+# OR (explicit options)
+llm --functions llm-tools-nmap.py "Run nmap_scan on 192.168.56.101 with options '-sV -Pn -p 3306,5432,27017,1433,1521,6379,5984'"
+
+
 # attacker side
 nmap -sV -p 21,22,80,5000 ${VULNBOX_IP} -oN nmap_ports.txt
 # check UPnP
@@ -559,4 +588,5 @@ frida -U --runtime=v8 -p 6691 -l hook_fun_change_args.js
 
 PACKAGE="com.example.a11x256.frida_test"
 frida -U -f "$PACKAGE" -l hook_fun_change_args.js
+
 
