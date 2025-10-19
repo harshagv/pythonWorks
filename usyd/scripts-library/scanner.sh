@@ -500,7 +500,10 @@ pip install --upgrade frida==17.3.2
 # Extract the .tar.xz on your computer
 adb -s emulator-5554 shell getprop ro.product.cpu.abilist
 
-curl -LO https://github.com/frida/frida/releases/download/17.3.2/frida-server-17.3.2-android-arm64.xz
+# 17.3.2 curl -LO https://github.com/frida/frida/releases/download/17.3.2/frida-server-17.3.2-android-arm64.xz
+# 15.2.2 curl -LO https://github.com/frida/frida/releases/download/15.2.2/frida-server-15.2.2-android-arm64.xz
+# 16.7.19 curl -LO https://github.com/frida/frida/releases/download/16.7.19/frida-server-16.7.19-android-arm64.xz
+
 unxz frida-server-17.3.2-android-arm64.xz
 mv frida-server-17.3.2-android-arm64 frida-server
 chmod +x frida-server
@@ -534,6 +537,8 @@ adb -s emulator-5554 logcat
 adb  -s emulator-5554 logcat -v time | grep --line-buffered "Sum"
 
 
+# app path
+pm path jwtc.android.chess
 
 
 # com.example.a11x256.frida_test
@@ -542,8 +547,9 @@ frida-trace -U -f com.example.a11x256.frida_test -i open
 
 # modify_sum.js
 Java.perform(function () {
+    console.log("Inside java perform function");
     var MyActivity = Java.use('com.example.a11x256.frida_test.my_activity');
-
+    
     MyActivity.fun.implementation = function (x, y) {
         console.log('[*] Original args: ' + x + ', ' + y);
 
@@ -557,14 +563,18 @@ Java.perform(function () {
 });
 
 
+adb shell pm list packages --apex-only
+pm disable-user --user 0 com.google.android.art
+
+
 PACKAGE="com.example.a11x256.frida_test"
 adb -s emulator-5554 shell pm list packages | grep "$PACKAGE" || adb shell pm path "$PACKAGE"
 package:com.example.a11x256.frida_test
 adb -s emulator-5554 shell "ps" | grep frida_test
+
 adb -s emulator-5554 shell ps -A | grep com.example.a11x256
 adb -s emulator-5554 shell ps -o USER,PID,NAME | grep <pid>
 PID=$(adb -s emulator-5554 shell pidof $PACKAGE | tr -d '\r')
-
 
 # frida -U -n com.example.a11x256.frida_test -l modify_sum.js
 frida -U -p <PID> -l modify_sum.js
@@ -588,5 +598,6 @@ frida -U --runtime=v8 -p 6691 -l hook_fun_change_args.js
 
 PACKAGE="com.example.a11x256.frida_test"
 frida -U -f "$PACKAGE" -l hook_fun_change_args.js
+
 
 
