@@ -545,22 +545,20 @@ pm path jwtc.android.chess
 
 frida-trace -U -f com.example.a11x256.frida_test -i open
 
-# modify_sum.js
-Java.perform(function () {
+# override.js
+console.log("Script loaded successfully ");
+Java.perform(function x(){ //Silently fails without the sleep from the python code
     console.log("Inside java perform function");
-    var MyActivity = Java.use('com.example.a11x256.frida_test.my_activity');
-    
-    MyActivity.fun.implementation = function (x, y) {
-        console.log('[*] Original args: ' + x + ', ' + y);
-
-        // Modify arguments
-        var newX = 2;
-        var newY = 5;
-        console.log('[*] Modified args: ' + newX + ', ' + newY);
-
-        return this.fun(newX, newY);
-    };
-});
+    //get a wrapper for our class
+    var my_class = Java.use("com.example.a11x256.frida_test.my_activity");
+    //replace the original implmenetation of the function `fun` with our custom function
+    my_class.fun.implementation = function(x,y){
+    //print the original arguments
+    console.log( "original call: fun("+ x + ", " + y + ")");
+    //call the original implementation of `fun` with args (2,5)
+    var ret_value = this.fun(2,5);
+    return ret_value;
+    }});
 
 
 adb shell pm list packages --apex-only
@@ -576,14 +574,14 @@ adb -s emulator-5554 shell ps -A | grep com.example.a11x256
 adb -s emulator-5554 shell ps -o USER,PID,NAME | grep <pid>
 PID=$(adb -s emulator-5554 shell pidof $PACKAGE | tr -d '\r')
 
-# frida -U -n com.example.a11x256.frida_test -l modify_sum.js
-frida -U -p <PID> -l modify_sum.js
+# frida -U -n com.example.a11x256.frida_test -l override.js
+frida -U -p <PID> -l override.js
 
 # spawn and inject
-frida -U -f com.example.a11x256.frida_test -l modify_sum.js
+frida -U -l override.js -f com.example.a11x256.frida_test
 
 # attach to running process
-frida -U -n com.example.a11x256.frida_test -l modify_sum.js
+frida -U -n com.example.a11x256.frida_test -l override.js
 
 
 
@@ -600,4 +598,20 @@ PACKAGE="com.example.a11x256.frida_test"
 frida -U -f "$PACKAGE" -l hook_fun_change_args.js
 
 
+
+## Mitmproxy
+cp ~/.mitmproxy/mitmproxy-ca-cert.cer mitmproxy-ca-cert.cer
+adb push mitmproxy-ca-cert.cer /sdcard/Download/mitmproxy-ca-cert.cer
+adb shell "chmod 644 /sdcard/Download/mitmproxy-ca-cert.cer"
+
+# Install the certificate
+
+Settings → Security → Install from storage (or Security → Encryption & credentials → Install a certificate), choose CA certificate / “Install from SD card”, select mitmproxy-ca-cert.cer, and install
+
+IP=$(ipconfig getifaddr en0)
+echo $IP
+adb shell settings put global http_proxy "$IP":8080
+adb shell settings put global https_proxy "$IP":8080
+adb shell settings get global http_proxy
+adb shell settings get global https_proxy
 
