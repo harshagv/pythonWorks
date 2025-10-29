@@ -441,6 +441,12 @@ vuls report
 
 
 
+## Resize VM disk size: 
+gparted 
+sudo pvresize /dev/sda5 
+sudo lvextend -l +100%FREE /dev/mapper/kali--vg-root 
+sudo resize2fs /dev/mapper/kali--vg-root 
+
 
 # Week #9
 #!/bin/bash
@@ -614,4 +620,5 @@ adb shell settings put global http_proxy "$IP":8080
 adb shell settings put global https_proxy "$IP":8080
 adb shell settings get global http_proxy
 adb shell settings get global https_proxy
+
 
