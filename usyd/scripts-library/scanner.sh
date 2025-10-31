@@ -524,8 +524,8 @@ adb -s emulator-5554 reboot
 
 
 adb -s emulator-5554 root
-adb -s emulator-5554 shell "/data/local/tmp/frida-server &"
-
+adb -s emulator-5554 shell "nohup /data/local/tmp/frida-server &"
+# adb shell "su -c 'nohup /data/local/tmp/frida-server -l 0.0.0.0:27042 &'"
 
 adb -s emulator-5554 shell "/data/local/tmp/frida-server --version"
 frida --version
@@ -620,5 +620,6 @@ adb shell settings put global http_proxy "$IP":8080
 adb shell settings put global https_proxy "$IP":8080
 adb shell settings get global http_proxy
 adb shell settings get global https_proxy
+
 
 
