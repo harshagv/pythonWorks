@@ -1,0 +1,355 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taming the Beast: Nginx, PHP and NAXSI Stack</title>
+  <!-- Import Silkscreen font for headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+  <!-- Import Share Tech Mono font for paragraph text -->
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+
+    html, body {
+      margin: 0;
+      padding: 1.5rem;  /* This supplies the space around all content */
+      height: 100%;
+      min-height: 100%;
+      background-color: black;
+      color: #00ff00;
+      font-family: monospace, Courier, monospace;
+      box-sizing: border-box;
+      //overflow: hidden !important;
+    }
+    body {
+      scrollbar-width: none;          /* Firefox */
+      -ms-overflow-style: none;       /* Internet Explorer 10+ */
+    }
+
+    body::-webkit-scrollbar {
+      display: none;                  /* Safari and Chrome */
+    }
+
+    .pulse-wrapper-outer {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto 3rem auto; /* Center horizontally, spacing at bottom */
+      border-radius: 10px;
+    }
+
+    .pulse-wrapper-outer::before,
+    .pulse-wrapper-outer::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 6px;
+      //border: 3px solid #00ff00;    /* <-- neon green border */
+      border: 3px solid #3ad5fd;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(1);
+      //box-shadow: 0 0 18px 8px #3ad5fd, 0 0 32px 20px #50c0ea;
+      animation: pulseOutLine 2.5s ease-out infinite;
+      z-index: 1;
+    }
+
+    .pulse-wrapper-outer::after {
+      animation-delay: 1.1s;
+    }
+
+    @keyframes pulseOutLine {
+      0% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(1.5);
+        opacity: 0;
+      }
+    }
+
+    .pulse-wrapper {
+      position: relative;
+      background-color: black;
+      color: #00ff00;
+      font-size: 1.2em;
+      box-sizing: border-box;
+      border-radius: 15px;
+      //border: 3px solid #00ff00;   /* <-- neon green around main box */
+      border: 3px solid #3ad5fd;
+      font-weight: bold;
+      padding: 24px;
+      font-family: 'Share Tech Mono', monospace;
+      z-index: 2;
+      max-width: 800px;     /* Limit width */
+      margin: 0;            /* No auto-stretching or centering here */
+    }
+
+    /* Pulse out animation */
+    @keyframes pulseOutBlue {
+      0% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(1.6);
+        opacity: 0;
+      }
+    }
+
+    h2 {
+      font-family: 'Silkscreen', monospace, Courier, monospace;
+      margin: 0 0 1rem 0;
+      color: #00ff00;
+      text-align: left;
+    }
+
+    p {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      line-height: 1.5;
+      margin: 0.5rem 0;
+      padding: 0.1rem;
+      text-align: left;
+      color: #00ff00;
+    }
+
+    a {
+      color: #00ff00;
+      text-decoration: none;
+      word-break: break-word;
+      margin-top: 0.5rem;
+      display: inline-block;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="pulse-wrapper-outer">
+    <div class="pulse-wrapper">
+      <h2>Hello everyone,</h2>
+      <p>
+        This post provides a comprehensive guide and an unattended installation script for the Week #4 tutorial. 
+        The objective is to host the DVWA application using the Nginx web server (instead of Apache) and protect it with <em>NAXSI</em>, an application-layer Web Application Firewall (WAF).
+      </p>
+
+      <p>
+        <strong>A Note on Learning vs. Automation:</strong> While the script provided automates the entire setup for convenience, 
+        I highly recommend running the commands individually from the script file the first time you go through this tutorial. 
+        This will help you understand the purpose of each step, see its output, and learn the core basics of compiling software, configuring web servers, and setting up a WAF
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+## markdown
+
+### Architecture Overview
+For this tutorial, we will use a single Ubuntu VM. This VM will act as our web server, running:
+
+* **Nginx:** A high-performance web server.
+* **PHP-FPM:** A process manager to handle PHP requests for Nginx.
+* **NAXSI:** A WAF module compiled directly into Nginx to inspect and block malicious traffic.
+* **DVWA:** The vulnerable web application we are protecting.
+
+---
+
+### Step 1: Prepare the Target Ubuntu VM
+
+> **Note:** Make sure your Ubuntu VM in Oracle VirtualBox uses the correct network mode so it has internet access and can also be reached from your host system to access the DVWA app running on the VM’s web server.
+
+Attach both following adapters to your VM's network:
+
+* **NAT:** The VM shares the host’s internet connection (for internet access).
+* **Host-only Network:** Provides direct local network access between host and VM. VM and host talk directly over the host-only IP range, with no internet by default. IP range: `192.168.56.x`.
+
+#### Configuration Steps:
+1. **Configure:** Add a second adapter in **VM Settings** -> **Network** -> **Expert** -> **Adapter 2** -> **Host-only Adapter**.
+2. **Check the VM's IP Address:** Inside the VM, open a terminal and run:
+   ```bash
+   ip a
+
+```
+
+*(or `ip addr show`).* Look for an interface (e.g., `enp0s8`, `enp0s9`) with an IP address like `192.168.56.x`. This is the VM’s Host-only network IP.
+3. **Port Forward from VM to Host using SSH tunneling:** Run this command in your host machine terminal:
+
+```bash
+ssh -L 8888:127.0.0.1:80 <user>@<vm_hostonly_ip> -N
+
+```
+
+4. **Access:** Browse to `http://localhost:8888/dvwa` from the host machine browser, connecting directly to the VM's DVWA app running on port 80.
+
+#### Connection Flow:
+
+```text
+[Ubuntu VM: [http://192.168.56.101:80](http://192.168.56.101:80)]
+                │
+                ▼
+     [VirtualBox Host-only Adapter]
+                │
+                │  (SSH Tunnel Port Forwarding: 127.0.0.1:8888 ← 192.168.56.101:80)
+                ▼
+[Host Browser: [http://127.0.0.1:8888](http://127.0.0.1:8888)]
+
+```
+
+The first and only step is to run a single automated script. This script will handle all the necessary installations and configurations as described in the tutorial guide, including:
+
+* Installing all required dependencies.
+* Downloading and compiling Nginx from source with the NAXSI module.
+* Installing and configuring PHP-FPM.
+* Downloading and setting up DVWA.
+* Configuring Nginx to serve DVWA and apply the NAXSI rules.
+* Creating a systemd service to manage Nginx easily.
+
+Log in to your Ubuntu VM and run the installation script.
+
+#### Supported Platforms:
+
+* `ubuntu-24.04.3-desktop-arm64` / `ubuntu-24.04.3-desktop-amd64`
+* `ubuntu-25.04-desktop-arm64`
+
+The output of the unattended installation script should display a series of structured status messages culminating in a clear confirmation indicating that DVWA, NGINX, PHP-FPM, and NAXSI were successfully installed, configured, and are ready for use with default credentials and access instructions provided. After the script finishes, your environment will be ready for the demonstration checkpoints.
+
+---
+
+### Step 2: Verifying the Setup & NAXSI Functionality
+
+Now, let's go through the checkpoints to demonstrate that everything is working as expected.
+
+#### Checkpoint 1: Start & Stop NGINX in Target VM
+
+The script automatically starts and enables the Nginx service. You can verify its status:
+
+```bash
+# Check status
+sudo systemctl status nginx --no-pager --quiet
+
+# Stop the service
+sudo systemctl stop nginx
+
+# Start the service again
+sudo systemctl start nginx
+
+```
+
+#### Checkpoint 2: Show the PHP Config File
+
+Open a web browser on your host machine. If you have configured port forwarding in VirtualBox, you can access a test PHP file. Create one quickly on the VM:
+
+```bash
+# On the Ubuntu VM
+echo "Hello! <?php phpinfo(); ?>" | sudo tee /var/www/html/info.php
+
+```
+
+Now, in your host machine browser, navigate to `http://localhost:8888/info.php`. You should see the detailed PHP configuration page.
+
+#### Checkpoint 3: Demonstrate NAXSI Blocking from Command Line in Target VM
+
+NAXSI is installed in blocking mode by default. We can test it with `curl`.
+
+1. Open two terminals connected to your Ubuntu VM.
+2. In the first terminal, watch the Nginx error log in real-time. This is where NAXSI logs blocked requests:
+```bash
+sudo tail -f /var/log/nginx/error.log
+
+```
+
+
+3. In the second terminal, send malicious-looking requests:
+```bash
+# Test a simple XSS payload
+curl 'http://localhost/?q=><script>alert(0)</script>'
+
+# Test a simple SQLi payload
+curl "http://localhost/?id=1'%20or%20'1'%3D'1'%20%23"
+
+```
+
+
+4. Observe the output in the first terminal. You should see log entries from NAXSI indicating it has blocked the requests with specific rule IDs (e.g., `id:1000`, `id:1302`). The `curl` commands will receive a `"Request Blocked by NAXSI"` response.
+
+#### Checkpoint 4: Log in to DVWA
+
+In your host machine browser, navigate to your DVWA instance (e.g., `http://localhost:8888/dvwa/login.php`). You should be able to log in with the default credentials (`admin`/`password`). Don't forget to create/reset the database via the `/setup.php` page first if needed.
+
+---
+
+### Step 3: Demonstrating WAF Evasion with Learning Mode
+
+Now, we'll show how NAXSI can be configured to allow traffic, which is useful for tuning the WAF to avoid blocking legitimate requests.
+
+#### Checkpoint 5 & 6: XSS and SQLi Attacks in DVWA
+
+##### Changing DVWA Security to LOW:
+
+1. In DVWA, log in as an admin user.
+2. Click the **DVWA Security** section from the left menu.
+3. Set the **Security Level** dropdown to **LOW**.
+4. Click **Submit** to apply the change.
+
+This adjustment ensures all vulnerabilities, including SQL Injection and Stored XSS, are exposed in their most basic, demonstration-ready form, enabling WAF rules to trigger clearly.
+
+##### Next Steps After Setting to LOW:
+
+1. In DVWA, navigate to the **SQL Injection** page and attempt an injection like:
+```sql
+1' or '1'='1' #
+
+```
+
+
+2. Navigate to the **XSS (Stored)** page and attempt to submit a script like:
+```html
+<script>alert('XSS')</script>
+
+```
+
+
+3. In both cases, the request should be blocked by NAXSI, and you will see corresponding entries in `/var/log/nginx/error.log`.
+
+#### Checkpoint 7: Switch to Learning Mode and Bypass the WAF
+
+1. On the Ubuntu VM, edit the NAXSI rules file to enable Learning Mode:
+```bash
+sudo nano /etc/nginx/naxsi/naxsi.rules
+
+```
+
+
+2. Locate the line containing `#LearningMode;`.
+3. Remove the `#` at the beginning of the line to uncomment it. The line should look like this after editing:
+```text
+LearningMode;
+
+```
+
+
+4. Save and exit the file.
+5. Reload Nginx to apply the new configuration:
+```bash
+sudo systemctl restart nginx
+
+```
+
+
+6. Repeat the XSS and SQLi attacks inside the DVWA web interface.
+7. This time, the attacks should succeed. The page will execute the SQL query or store the XSS payload.
+8. Check `/var/log/nginx/error.log` again. You will see that NAXSI still logs the attacks, but it prefaces the log entry with `NAXSI_FMT: LEARNING`. This shows it detected the threat but did not block it, allowing an administrator to create whitelist rules for legitimate traffic that might accidentally trigger the WAF.
+
+---
+
+This completes all the required checkpoints for the tutorial, demonstrating a fully functional Nginx/NAXSI setup and the core principles of WAF operation.
+
+```

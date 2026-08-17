@@ -1,0 +1,40 @@
+I want to share a practical guide I recently published on Medium that walks you through setting up SSH and SCP between your host machine and Linux VMs like Ubuntu and Kali using Oracle VirtualBox.
+
+### Overview
+This step-by-step tutorial covers:
+
+* **Installing and enabling SSH server** on Ubuntu and Kali
+* **Configuring password-based SSH access**
+* **Setting up Host-Only Networking** in VirtualBox
+* **Transferring files securely with SCP** from host to VM
+* **Common troubleshooting tips** for SSH/SCP issues
+
+If you often work with VMs and want to streamline your workflow for remote access and file transfer, this guide may be really helpful.
+
+You can check out the full post here:
+* [SSH & SCP Setup Between Host and VM (Ubuntu/Kali) using VirtualBox](https://medium.com/@harshagv/ssh-scp-setup-between-host-and-vm-ubuntu-kali-using-virtualbox-da067a3975de)
+
+---
+
+### Running Wireshark with Nmap
+
+The steps for running Wireshark alongside Nmap scans are straightforward.
+
+#### 1. Run TCP ACK Scan:
+```bash
+sudo nmap -sA -p 22,80 <target_ip>
+
+```
+
+#### 2. Run TCP Xmas Scan:
+
+```bash
+sudo nmap -sX -p 22,80 <target_ip>
+
+```
+
+#### 3. Capture and Analyze:
+
+Analyze the resulting network traffic in **Wireshark** attached to the `eth0` network interface.
+
+```

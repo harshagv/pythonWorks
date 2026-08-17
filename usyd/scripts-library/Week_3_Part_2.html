@@ -1,0 +1,182 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mastering Suricata in OPNsense</title>
+  <!-- Import Silkscreen font for headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+  <!-- Import Share Tech Mono font for paragraph text -->
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    /* Full-page base reset */
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      min-height: 100%;
+      overflow: hidden;      /* Prevent scrollbars */
+      background-color: black;
+      color: #00ff00;
+      font-family: monospace, Courier, monospace;
+      padding: 2rem;         /* Page padding */
+      box-sizing: border-box;
+    }
+
+    .pulse-wrapper {
+      border: 3px solid #00ff00;
+      padding: 1.5rem;
+      border-radius: 9px;
+      animation: pulseGlow 2.5s infinite;
+      margin: 0 auto;
+      max-width: 800px;
+      width: 100%;
+      box-sizing: border-box;
+      height: auto;          /* Let content define size */
+      margin-bottom: 5rem;   /* Extra breathing room */
+    }
+
+    @keyframes pulseGlow {
+      0% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0.3);
+        transform: scale(1.03);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+        transform: scale(1);
+      }
+    }
+
+    h2 {
+      font-family: 'Silkscreen', monospace, Courier, monospace;
+      margin: 0 0 1rem 0;
+      color: #00ff00;
+      text-align: left;
+    }
+
+    p {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      line-height: 1.5;
+      margin: 0.5rem 0;
+      padding: 0.1rem;
+      text-align: left;
+      color: #00ff00;
+    }
+
+    a {
+      color: #00ff00;
+      text-decoration: none;
+      word-break: break-word;
+      margin-top: 0.5rem;
+      display: inline-block;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="pulse-wrapper">
+    <h2>Hello everyone,</h2>
+    <p>
+      In this part of the tutorial week#3, we need to create a custom Suricata rule
+      to detect ICMP (ping) traffic. You might notice that the OPNsense Web GUI under
+      <em>Services → Intrusion Detection → Administration → User-defined</em>
+      has a simplified interface that doesn't let you specify the protocol directly.
+    </p>
+    <p>
+      To create more advanced or specific rules, we can leverage the command-line
+      interface (CLI) to write a raw Suricata rule. This guide will walk you through
+      the process.
+    </p>
+    <p>
+      <strong>Disclaimer:</strong> This method involves directly editing system
+      configuration files. Please follow the steps carefully and make no typos to
+      avoid issues with the Intrusion Detection service.
+    </p>
+  </div>
+</body>
+
+</html>
+```
+
+
+
+## markdown
+Step 1: Access the OPNsense Shell
+First, we need to get a command prompt on the OPNsense VM itself.
+
+1. Open the VirtualBox console for your OPNsense VM.
+2. Log in with your credentials (default is root / opnsense).
+3. From the main menu, select option **8) Shell** and press Enter. You will be dropped into a root shell prompt (`#`).
+
+Step 2: Create and Edit a Custom Rule File
+We will create a new file specifically for our custom ICMP rule. This is safer than editing the default files.
+
+1. Open a new rule file using the `nano` text editor:
+   ```bash
+   nano /usr/local/etc/suricata/rules/icmp.rules
+
+```
+
+2. Carefully type or paste the following single line into the editor. This is the raw Suricata rule:
+```suricata
+alert icmp any any -> any any (msg:"ICMP packet detected!"; sid:999999; rev:1;)
+
+```
+
+
+3. To save the file in `nano`:
+a. Press **Ctrl + O** (hold the Ctrl key and press the letter O) to write out (save) the file.
+b. Press **Enter** to confirm the filename.
+4. To exit `nano`:
+a. Press **Ctrl + X** (hold the Ctrl key and press the letter X) to exit the editor.
+b. If prompted to save changes while exiting, press **Y** for yes, then **Enter** to confirm the filename.
+
+*Note for `vi` users:* If using `vi` instead of `nano`, press the **Esc** key to exit INSERT mode, then type `:wq` and press **Enter** to write the file and quit.
+
+### Rule Breakdown:
+
+* **alert**: The action to take (log an alert).
+* **icmp**: The protocol to inspect. This is the key part we couldn't do in the GUI.
+* **any any -> any any**: The source and destination IPs/ports (we're watching for any ICMP traffic).
+* **10.0.10.100**: The destination IP address (the DVWA VM) for the ping command.
+* **(msg:"ICMP packet detected!";**: The custom message that will appear in the alert logs.
+* **sid:999999;**: A unique Signature ID. Custom rules should start from 999,999 to avoid conflicts.
+* **rev:1;)**: The revision number of the rule.
+
+Step 3: Enable the New Rule File in the GUI
+Now, we need to tell OPNsense to actually load and use our new `icmp.rules` file.
+
+1. Go back to the OPNsense Web GUI in your Kali browser (`http://192.158.56.254`).
+2. Navigate to **Services** -> **Intrusion Detection** -> **Administration**.
+3. Click the **Rules** tab.
+4. Scroll down to the bottom of the list. You should see your new file, `icmp.rules`.
+5. Check the box next to `icmp.rules` to enable it.
+6. Click **Apply** at the bottom of the page.
+
+Step 4: Reload Suricata and Verify
+The final step is to apply all changes and test the rule.
+
+1. Go to the **Settings** tab within the Intrusion Detection section.
+2. Click the **Apply** button at the bottom of the page. This will reload the Suricata engine with your new ruleset included.
+3. Restart the Suricata service using the refresh ⟳ icon in the top-right corner.
+4. Test the rule: From your Kali VM, ping the DVWA VM:
+```bash
+ping 10.0.10.100
+
+```
+
+
+5. Check the alerts: In the OPNsense GUI, go to **Services** -> **Intrusion Detection** -> **Alerts**. You should now see new entries with your custom message, `"ICMP packet detected!"`, confirming your rule is working perfectly.
+
+```

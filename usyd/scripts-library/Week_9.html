@@ -1,0 +1,415 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taming the Beast: Nginx, PHP and NAXSI Stack</title>
+  <!-- Import Silkscreen font for headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
+  <!-- Import Share Tech Mono font for paragraph text -->
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 1rem;
+      height: 100%;
+      min-height: 100%;
+      background-color: black;
+      color: #00ff00;
+      font-family: monospace, Courier, monospace;
+      box-sizing: border-box;
+      overflow: hidden !important; /* Hide scrollbars */
+    }
+
+    /* --- SURGICAL EDIT START --- */
+    /* Style the canvas to be a fixed, non-interactive background */
+    #matrix-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1; /* Lower layer */
+    }
+
+    /* iPhone Frame Styles */
+    .iphone-frame {
+      position: relative;
+      width: 360px;
+      height: 630px;
+      background: #4A0404; /* Deep, dark blood red */
+      border: 5px solid #FF0000; /* Bright, glowing alert red */      
+      //background: #F8F9F9; /* Clean, off-white marble */
+      //border: 5px solid #D4AF37; /* Muted gold accent */
+      //background: #F5F5DC; /* Classic computer beige */
+      //border: 5px solid #D2B48C; /* A slightly darker tan for the border */
+      border-radius: 50px; /* Rounded corners for the phone body */
+      margin: 2rem auto;
+      padding: 75px 20px; /* Top/bottom padding for bezel, left/right for side bezel */
+      box-sizing: border-box;
+      z-index: 2;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .iphone-content {
+      position: relative;
+      background-color: rgba(0, 0, 0, 0.75); /* Slightly transparent background to see rain behind */
+      color: #00ff00;
+      font-size: 1.2em;
+      box-sizing: border-box;
+      border-radius: 5px; /* Screen doesn't have sharp corners */
+      font-weight: bold;
+      padding: 24px;
+      font-family: 'Share Tech Mono', monospace;
+      height: 100%;
+      width: 100%;
+      overflow-y: auto; /* Add scroll if content is too long */
+    }
+
+    .home-button {
+      position: absolute;
+      bottom: 15px; /* Position in the bottom padding area */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 50px;
+      background: #4A0404;
+      border: 1px solid #444;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    /* --- SURGICAL EDIT END --- */
+
+    h2 {
+      font-family: 'Silkscreen', monospace, Courier, monospace;
+      margin: 0 0 1rem 0;
+      color: #00ff00;
+      text-align: left;
+    }
+
+    p {
+      font-family: 'VT323', monospace;
+      font-size: 1rem;
+      line-height: 1.5;
+      margin: 0.5rem 0;
+      padding: 0.1rem;
+      text-align: left;
+      color: #00ff00;
+    }
+
+    a {
+      color: #00ff00;
+      text-decoration: none;
+      word-break: break-word;
+      margin-top: 0.5rem;
+      display: inline-block;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- The new canvas element for the Matrix rain -->
+  <canvas id="matrix-canvas"></canvas>
+
+  <div class="iphone-frame">
+    <div class="iphone-content">
+      <h2>Hello everyone,</h2>
+      <p>This post provides a comprehensive guide for the tutorial week#9 exercises. 
+        
+        We will be covering three key tasks: intercepting HTTP(S) traffic from an Android emulator using MITMproxy, instrumenting a basic C application with Frida, and finally, using Frida to hook and modify a running Android application.
+      </p>
+    </div>
+    <div class="home-button"></div>
+  </div>
+
+  <!-- The new JavaScript for the Matrix rain effect -->
+  <script>
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas to full screen
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Characters for the rain - Katakana, numbers, etc.
+    const katakana = 'ಕಖಗಘಙಚಛಜಝಞಟಠಡಢಣತಥದಧನಪಫಬಭಮಯರಱಲವಶಷಸಹಳೞಆಇಈಉಊಋೠಎಏಐಒಓಔಅಂಅಃ';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const characters = (katakana + latin + nums).split('');
+
+    const fontSize = 16;
+    const columns = Math.floor(canvas.width / fontSize);
+
+    // Create an array to track the y-position of each column's drop
+    const drops = [];
+    for (let i = 0; i < columns; i++) {
+      drops[i] = 1;
+    }
+
+    function draw() {
+      // Create the fading trail effect by drawing a semi-transparent black rectangle
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Set the color and font for the characters
+      ctx.fillStyle = '#00ff00'; // Classic green
+      ctx.font = fontSize + 'px monospace';
+
+      // Loop through each column
+      for (let i = 0; i < drops.length; i++) {
+        // Pick a random character
+        const text = characters[Math.floor(Math.random() * characters.length)];
+        // Draw the character at its current position
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        // Reset the drop to the top if it goes off-screen, with a random chance
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+
+        // Move the drop down for the next frame
+        drops[i]++;
+      }
+    }
+
+    // Start the animation loop (runs roughly 30 times per second)
+    setInterval(draw, 33);
+
+    // Optional: Handle window resize to make it responsive
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        // Recalculate columns and reset drops if needed
+    });
+  </script>
+</body>
+</html>
+```
+
+> **Note:** This guide assumes a macOS (Apple Silicon) host. Windows users must adapt commands accordingly.
+
+---
+
+### Task 1: HTTP(S) Traffic Analysis via MITMproxy
+
+In this task, we will configure an Android emulator to route its traffic through a proxy running on our host machine, allowing us to inspect encrypted HTTPS traffic.
+
+#### 1. Start MITMproxy on Host (macOS)
+
+First, find your local IP address and start `mitmweb` to listen on that interface:
+
+```bash
+IP=$(ipconfig getifaddr en0)
+echo "Your Host IP is: $IP"
+mitmweb --listen-host "$IP" --listen-port 8080
+
+```
+
+Keep this terminal open. The web interface will launch automatically at `[http://127.0.0.1:8081](http://127.0.0.1:8081)`.
+
+#### 2. Install the MITMproxy CA Certificate on Android
+
+We need the Android device to trust the proxy's certificate to intercept HTTPS traffic:
+
+```bash
+# Copy the cert to your current directory
+cp ~/.mitmproxy/mitmproxy-ca-cert.cer mitmproxy-ca-cert.cer
+
+# Push it to the emulator's Download folder
+adb push mitmproxy-ca-cert.cer /sdcard/Download/mitmproxy-ca-cert.cer
+
+# Ensure it's readable
+adb shell "chmod 644 /sdcard/Download/mitmproxy-ca-cert.cer"
+
+```
+
+Now, on the Android emulator:
+
+1. Go to **Settings** → **Security** → **Encryption & credentials** → **Install a certificate** → **CA certificate**.
+2. Select **"Install anyway"** if prompted.
+3. Navigate to the **Downloads** folder and select `mitmproxy-ca-cert.cer` to install it.
+
+#### 3. Configure Android to Use the Proxy
+
+We can automate the proxy configuration using `adb` instead of navigating the GUI:
+
+```bash
+IP=$(ipconfig getifaddr en0)
+echo "Setting proxy to $IP:8080..."
+adb shell settings put global http_proxy "$IP":8080
+adb shell settings put global https_proxy "$IP":8080
+
+# Verify settings
+adb shell settings get global http_proxy
+adb shell settings get global https_proxy
+
+```
+
+#### 4. Verify Traffic Interception
+
+1. Open **Chrome** on the Android emulator and search for `cyber`.
+2. On your host machine, check the MITMproxy web interface at `[http://127.0.0.1:8081/#/flows](http://127.0.0.1:8081/#/flows)`. You should see the HTTPS requests being captured and decrypted.
+
+#### 5. Explore Further (with another app)
+
+Try the same method for another app. Launch a different app and monitor its network requests in the `mitmproxy` web interface to see how it communicates.
+
+---
+
+### Task 2: Instrumenting a Basic C Application (Kali VM)
+
+In this task, we will use Frida to hook a standard C library function (`rand`) in a simple compiled program.
+
+#### 1. Compile the Target Program
+
+Open **Terminal Tab #1** on your Kali VM and compile the provided C code:
+
+```bash
+gcc exercise.c -o a.out
+
+```
+
+#### 2. Set up Frida Environment
+
+Open **Terminal Tab #2** and set up a Python virtual environment for Frida:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install frida-tools
+
+```
+
+#### 3. Run the Target Program
+
+In **Terminal Tab #1**, start the program:
+
+```bash
+./a.out
+
+```
+
+#### 4. Attach Frida
+
+In **Terminal Tab #2**, attach Frida to the running process:
+
+```bash
+frida a.out
+
+```
+
+Once the Frida REPL opens, paste the following JavaScript hook. This script intercepts calls to `rand()` and forces it to always return `0`:
+
+```javascript
+Interceptor.attach(Module.getGlobalExportByName("rand"), {
+  onEnter: function () {
+    console.log("rand() called");
+  },
+  onLeave: function (retval) {
+    retval.replace(0); 
+  }
+});
+
+```
+
+#### 5. Observe the Results
+
+Go back to **Terminal Tab #1** and interact with the `a.out` program. You will notice that the "random" numbers are no longer random, and the encryption (if based on `rand()`) is now predictable.
+
+---
+
+### Task 3: Android Instrumentation with Frida Hooking
+
+This task demonstrates how to override a Java method in a running Android app to change its behavior.
+
+#### Prerequisites:
+
+* **AVD:** Pixel 9 running Android 16 (Google APIs, NOT Google Play).
+* **Host:** macOS with Python 3.x.
+* **Frida version:** 17.4.0 (matched on both host and device).
+
+#### Step 1: Install Frida Server on Android Emulator
+
+```bash
+# 1. Download the correct server binary
+wget https://github.com/frida/frida/releases/download/17.4.0/frida-server-17.4.0-android-arm64.xz
+
+# 2. Decompress it
+unxz frida-server-17.4.0-android-arm64.xz
+
+# 3. Push to the device and make executable
+adb push frida-server-17.4.0-android-arm64 /data/local/tmp/frida-server
+adb shell "chmod 755 /data/local/tmp/frida-server"
+
+# 4. Run adb shell as root
+adb root
+
+# 5. Run the server as root in the background
+adb shell "nohup /data/local/tmp/frida-server &"
+
+```
+
+#### Step 2: Install Frida Tools on Host
+
+```bash
+pip install frida==17.4.0 frida-tools==14.4.5
+
+```
+
+#### Step 3: Install and Launch Target App
+
+```bash
+adb install task4.apk
+
+```
+
+Launch the `frida_test` app on your emulator.
+
+#### Step 4: Prepare the Hook Script (`override.js`)
+
+Save the following code as `override.js`. This script finds the `my_activity` class and replaces its `fun` method with our own implementation that always passes the arguments `2` and `5`:
+
+```javascript
+console.log("Script loaded successfully ");
+Java.perform(function x(){ //Silently fails without the sleep from the python code
+    console.log("Inside java perform function");
+    //get a wrapper for our class
+    var my_class = Java.use("com.example.a11x256.frida_test.my_activity");
+    //replace the original implmenetation of the function `fun` with our custom function
+    my_class.fun.implementation = function(x,y){
+    //print the original arguments
+    console.log( "original call: fun("+ x + ", " + y + ")");
+    //call the original implementation of `fun` with args (2,5)
+    var ret_value = this.fun(2,5);
+    return ret_value;
+    }});
+
+```
+
+#### Step 5: Inject the Script
+
+This command finds the PID and injects the script:
+
+```bash
+frida -U -l override.js -f com.example.a11x256.frida_test
+
+```
+
+#### Step 6: Observe the Output
+
+In a new terminal, watch the device logs. The hook forces the calculation to be `sum(2+5)` overriding original `sum(50+30)`. So you will see the app log the incorrect sum:
+
+```bash
+adb shell logcat -v time | grep --line-buffered "Sum"
+
+```
+
+Now, interact with the app in the emulator. You should see the log messages in your terminal, confirming that your hook has successfully intercepted and modified the method call.
+
+> **Note:** Frida script was pwned with a 0-day assist from Sohail.

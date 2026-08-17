@@ -1,0 +1,157 @@
+This tutorial week #5 guide provides a detailed walkthrough for setting up a complete and robust penetration testing lab. We will deploy the Damn Vulnerable Web Application (DVWA) on an Ubuntu VM and configure a Kali Linux VM with all the necessary tools to perform a comprehensive security assessment. The process is streamlined using the `dvwa-pentest-lab.sh` automation script.
+
+> **⚠️ CRITICAL PREREQUISITE: USE CLEAN VMS**
+> Before you begin, please revert your Ubuntu and Kali VMs to a clean, fresh snapshot.
+> This lab script is designed to run in a pristine environment. Reusing a VM with existing custom software or configurations can cause unpredictable errors and script failures. Starting fresh is the single best way to save yourself hours of frustrating debugging.
+
+---
+
+### Architecture Overview
+
+For this lab, we will use a classic two-machine virtualized setup:
+
+* **Ubuntu VM (The Target):** This machine will host our vulnerable web application. It will run a standard LAMP stack (Linux, Apache, MySQL, PHP), which is a very common configuration for web servers.
+* **Kali Linux VM (The Attacker):** This machine will be our attack platform. We will install a suite of professional penetration testing tools, including web scanners, brute-force tools, and exploitation frameworks.
+
+Both VMs will be "bridged" to your main network, allowing them to communicate with each other and your host machine as if they were real computers on your LAN.
+
+---
+
+### Connection Flow and Network Configuration
+
+To ensure seamless communication between your host machine and the virtual machines, we will use the **Bridged Adapter** network mode in VirtualBox.
+
+* **ᯓ➤ Network Mode:** Bridged Adapter for both VMs.
+
+This mode connects your VMs directly to your physical network (e.g., your home Wi-Fi or Ethernet). Your router will assign each VM its own unique IP address, just like it does for your laptop or phone.
+
+#### VirtualBox Setup:
+
+1. In the VirtualBox settings for both your Kali and Ubuntu VMs, go to the **Network** tab.
+2. Set **Adapter 1** to be Attached to: **Bridged Adapter**.
+3. In the **Name** dropdown, select the network interface of your host machine that is connected to the internet (e.g., `en0`: Wi-Fi on a Mac, or your Ethernet card name on Windows/Linux).
+
+#### IP Addressing:
+
+After starting your VMs, they will get IP addresses from your router. You will need to find these IPs.
+
+On each VM, open a terminal and run the command:
+
+```bash
+ip a
+
+```
+
+Look for the IP address under the `eth0` or `enp0s3` interface (e.g., `inet 10.0.103.99`).
+
+For this guide, we will assume:
+
+* **Kali VM IP:** `10.0.103.99` *(example)*
+* **Ubuntu VM IP:** `192.168.1.16` *(example)*
+
+#### Connection Flow Diagram:
+
+```text
+   [Kali VM: 10.0.103.69] <--- Scans & Attacks ---> [Ubuntu VM: 10.0.103.99]
+            ▲                                                 ▲
+            | (SSH, Browser Access)                           | (SSH, Browser Access)
+            |                                                 |
+   +--------------------------------------------------------------------+
+   |                 VirtualBox Bridged Adapter Network                 |
+   +--------------------------------------------------------------------+
+
+```
+
+---
+
+### Phase 1: Setting Up the Ubuntu (Target) VM
+
+Follow these steps on your Ubuntu VM terminal.
+
+#### Step 1: Standard DVWA Installation (Modern & Secure)
+
+This is the default setup. It installs DVWA with a modern version of MySQL, which is secure against the `--os-shell` exploit we will use later. This is a great starting point for finding standard web vulnerabilities.
+
+```bash
+wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/master/usyd/scripts-library/dvwa-pentest-lab.sh | sudo bash -s dvwa
+
+```
+
+* **What it does:**
+* Installs OpenSSH Server, Apache2, MySQL Server, and PHP.
+* Clones the latest version of DVWA from GitHub into `/var/www/html/dvwa`.
+* Configures the MySQL database and prompts you for a password for the `dvwa` user.
+* Updates the DVWA config file and sets the necessary permissions.
+
+
+* **Post-Install Action:**
+1. Open a browser on your host machine or Kali VM and navigate to `http://<Your_Ubuntu_IP>/dvwa/setup.php`.
+2. Click the **"Create / Reset Database"** button at the bottom of the page.
+
+
+
+#### Step 2: Downgrade to Vulnerable MySQL (For Advanced Exploits)
+
+To practice the `sqlmap --os-shell` exploit, we need a vulnerable database. This command purges the modern MySQL server and replaces it with a vulnerable MySQL 5.5 instance running in a Docker container.
+
+```bash
+wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/master/usyd/scripts-library/dvwa-pentest-lab.sh | sudo bash -s mysql50
+
+```
+
+* **What it does:**
+* Completely removes the existing MySQL/MariaDB server to avoid conflicts.
+* Installs Docker.
+* Pulls and runs a `mysql:5.5` Docker container.
+* Automatically configures the container with the `dvwa` database and user.
+* Reconfigures DVWA to connect to this new Dockerized database.
+
+
+* **Post-Install Action:**
+* Navigate back to `http://<Your_Ubuntu_IP>/dvwa/setup.php` and click the **"Create / Reset Database"** button again to populate the new database.
+
+
+
+#### Step 3: Set Insecure Permissions (For Advanced Exploits)
+
+The `sqlmap --os-shell` exploit works by writing a file to the web server's directory. To allow this, we must set dangerously insecure, world-writable permissions. This should only ever be done in a firewalled lab environment.
+
+```bash
+wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/master/usyd/scripts-library/dvwa-pentest-lab.sh | sudo bash -s set_permissions_ubuntu
+
+```
+
+* **What it does:**
+* Runs `chmod -R 777` on the `/var/www/html/dvwa` directory, making it writable by the `www-data` user that `sqlmap` will compromise.
+
+
+
+Your Ubuntu target VM is now fully prepared for all tutorial tasks.
+
+---
+
+### Phase 2: Setting Up the Kali (Attacker) VM
+
+Follow these steps on your Kali Linux VM terminal.
+
+#### Step 4: Install All Prerequisite Tools
+
+This command installs the complete suite of tools we will need for the lab, including scanners, exploit tools, and proxy tools.
+
+```bash
+wget -qO- https://raw.githubusercontent.com/harshagv/pythonWorks/master/usyd/scripts-library/dvwa-pentest-lab.sh | sudo bash -s kali_prereqs
+
+```
+
+* **What it does:**
+* Updates your system.
+* Installs `dirb`, `gobuster`, `seclists`, `hydra`, `sqlmap`, `nikto`, `burpsuite`, `zaproxy`, `chromium`, and other necessary utilities.
+* Installs Docker on Kali, which is needed for some automated ZAP scans.
+
+
+* **Post-Install Action (CRITICAL):**
+* The script adds your user (`kali`) to the `docker` group. For this change to take effect, you must log out and log back in, or simply reboot your Kali VM.
+
+
+
+Your Kali VM is now fully equipped to begin the penetration test. Proceed with Week #6 Tutorial steps.
